@@ -20,7 +20,7 @@ include FixtureFarm::ControllerHook if Rails.env.development?
 Then start/stop recording using tasks:
 
 ```bash
-bundle exec fixture_farm record FIXTURE_NAMES_PREFIX
+bundle exec fixture_farm record some_awesome_name_prefix
 bundle exec fixture_farm status
 bundle exec fixture_farm stop
 ```
@@ -47,7 +47,7 @@ test 'some stuff does the right thing' do
 end
 ```
 
-Now you can rewrite this test to use recorded fixtures:
+Running this test generates user and post fixtures. Now you can rewrite this test to use them:
 
 ```ruby
 test 'some stuff does the right thing' do
