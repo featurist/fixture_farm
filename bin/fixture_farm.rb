@@ -10,12 +10,12 @@ end
 case ARGV[0]
 when 'record'
   usage unless ARGV[1]
-  FixtureRecorder.start_recording_session!(ARGV[1])
+  FixtureFarm::FixtureRecorder.start_recording_session!(ARGV[1])
   puts "Recording fixtures with prefix #{ARGV[1]}"
 when 'status'
-  puts "Recording is #{FixtureRecorder.recording_session_in_progress? ? 'on' : 'off'}"
+  puts "Recording is #{FixtureFarm::FixtureRecorder.recording_session_in_progress? ? 'on' : 'off'}"
 when 'stop'
-  FixtureRecorder.stop_recording_session!
+  FixtureFarm::FixtureRecorder.stop_recording_session!
   puts 'Stopped recording'
 else
   usage

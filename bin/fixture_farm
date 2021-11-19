@@ -2,6 +2,6 @@
 # frozen_string_literal: true
 
 system(
-  "bundle exec rails runner #{File.dirname(__FILE__)}/fixture_farm.rb",
+  "rails runner #{File.expand_path('fixture_farm.rb', __dir__)} #{ARGV.join(' ')}",
   exception: true
 )
