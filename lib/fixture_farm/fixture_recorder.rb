@@ -125,12 +125,14 @@ module FixtureFarm
           end
         end.to_h
 
-        fixture_file_path = model_instance.fixture_file_path || Rails.root.join('test', 'fixtures', "#{model_instance.class.table_name}.yml")
+        fixtures_file_path = model_instance.fixtures_file_path
 
-        fixtures = File.exist?(fixture_file_path) ? YAML.load_file(fixture_file_path) : {}
+        fixtures = File.exist?(fixtures_file_path) ? YAML.load_file(fixtures_file_path) : {}
         fixtures[new_fixture_name] = yaml_attributes
 
-        File.open(fixture_file_path, 'w') do |file|
+        FileUtils.mkdir_p(fixtures_file_path.dirname)
+
+        File.open(fixtures_file_path, 'w') do |file|
           yaml = YAML.dump(fixtures).gsub(/\n(?=[^\s])/, "\n\n").delete_prefix("---\n\n")
           file.write(yaml)
         end
