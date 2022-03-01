@@ -43,7 +43,7 @@ module FixtureFarm
       subscriber = ActiveSupport::Notifications.subscribe 'sql.active_record' do |event|
         payload = event.payload
 
-        next unless payload[:name] =~ /(\w+) Create/
+        next unless payload[:name] =~ /([:\w]+) Create/
 
         new_fixture_class_name = Regexp.last_match(1)
 
