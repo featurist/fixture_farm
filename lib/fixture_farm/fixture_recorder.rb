@@ -125,6 +125,9 @@ module FixtureFarm
           end
         end.to_h
 
+        yaml_attributes.delete('created_at') if yaml_attributes['created_at'] == '<%= Time.zone.now %>'
+        yaml_attributes.delete('updated_at') if yaml_attributes['updated_at'] == '<%= Time.zone.now %>'
+
         fixtures_file_path = model_instance.fixtures_file_path
 
         fixtures = File.exist?(fixtures_file_path) ? YAML.load_file(fixtures_file_path) : {}
