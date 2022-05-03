@@ -7,6 +7,11 @@ This gem lets you do two things:
 
 Generated fixture that `belongs_to` a record from an existing fixture, will reference that fixture by name.
 
+### Limitations
+
+- doesn't update fixtures
+- doesn't delete fixtures
+
 ## Installation
 
 Add this line to your application's Gemfile:
