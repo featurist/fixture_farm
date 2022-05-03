@@ -13,7 +13,7 @@ module FixtureFarm
     def self.resume_recording_session
       start_recording_session! unless recording_session_in_progress?
 
-      recording_session = JSON.load_file(STORE_PATH)
+      recording_session = JSON.load_file(STORE_PATH, permitted_classes: [ActiveSupport::HashWithIndifferentAccess])
 
       new_models = recording_session['new_models'].map do |(class_name, id)|
         class_name.constantize.find(id)
@@ -130,7 +130,7 @@ module FixtureFarm
 
         fixtures_file_path = model_instance.fixtures_file_path
 
-        fixtures = File.exist?(fixtures_file_path) ? YAML.load_file(fixtures_file_path) : {}
+        fixtures = File.exist?(fixtures_file_path) ? YAML.load_file(fixtures_file_path, permitted_classes: [ActiveSupport::HashWithIndifferentAccess]) : {}
         fixtures[new_fixture_name] = yaml_attributes
 
         FileUtils.mkdir_p(fixtures_file_path.dirname)

@@ -7,7 +7,7 @@ module FixtureFarm
 
       return nil unless File.exist?(fixtures_file_path)
 
-      fixtures = YAML.load_file(fixtures_file_path)
+      fixtures = YAML.load_file(fixtures_file_path, permitted_classes: [ActiveSupport::HashWithIndifferentAccess])
       fixtures.keys.find do |key|
         ActiveRecord::FixtureSet.identify(key) == id
       end
