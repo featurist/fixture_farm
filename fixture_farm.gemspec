@@ -21,5 +21,5 @@ Gem::Specification.new do |spec|
   spec.executables   = ['fixture_farm', 'fixture_farm.rb']
   spec.require_paths = ['lib']
 
-  spec.add_dependency 'rails', '~> 6.1.4', '>= 6.1.4.1'
+  spec.add_dependency 'rails', '>= 6.1.4.1'
 end
