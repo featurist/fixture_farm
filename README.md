@@ -7,6 +7,26 @@ This gem lets you do two things:
 
 Generated fixture that `belongs_to` a record from an existing fixture, will reference that fixture by name.
 
+## Installation
+
+Add this line to your application's Gemfile:
+
+```ruby
+gem 'fixture_farm', group: %i[development test]
+```
+
+And then execute:
+
+```bash
+bundle install
+```
+
+Or install it yourself as:
+
+```bash
+gem install fixture_farm
+```
+
 ## Usage
 
 ### Record as you browse
@@ -14,7 +34,13 @@ Generated fixture that `belongs_to` a record from an existing fixture, will refe
 To record as you browse in development add this to `ApplicationController`:
 
 ```ruby
-include FixtureFarm::ControllerHook if Rails.env.development?
+include FixtureFarm::ControllerHook if defined?(FixtureFarm)
+```
+
+And in `ApplicationJob` if needed:
+
+```ruby
+include FixtureFarm::ActiveJobHook if defined?(FixtureFarm)
 ```
 
 Then start/stop recording using tasks:
@@ -57,25 +83,6 @@ test 'some stuff does the right thing' do
     user.posts.first.publish!
   end
 end
-```
-
-## Installation
-Add this line to your application's Gemfile:
-
-```ruby
-gem 'fixture_farm', group: %i[development test]
-```
-
-And then execute:
-
-```bash
-bundle install
-```
-
-Or install it yourself as:
-
-```bash
-gem install fixture_farm
 ```
 
 ## License
