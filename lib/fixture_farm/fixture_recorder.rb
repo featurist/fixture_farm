@@ -120,10 +120,10 @@ module FixtureFarm
             end&.first || associated_model_instance.fixture_name
 
             [belongs_to_association.name.to_s, associated_fixture_name]
-          else
+          elsif model_instance.column_for_attribute(k).type
             [k, serialize_attributes(v)]
           end
-        end.to_h
+        end.compact.to_h
 
         yaml_attributes.delete('created_at') if yaml_attributes['created_at'] == '<%= Time.zone.now %>'
         yaml_attributes.delete('updated_at') if yaml_attributes['updated_at'] == '<%= Time.zone.now %>'
