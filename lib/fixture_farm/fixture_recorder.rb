@@ -113,7 +113,7 @@ module FixtureFarm
           end
 
           if belongs_to_association
-            associated_model_instance = model_instance.public_send(belongs_to_association.name)
+            associated_model_instance = find_assiciated_model_instance(model_instance, belongs_to_association)
 
             associated_fixture_name = named_new_fixtures.find do |_, fixture_model|
               fixture_model.id == associated_model_instance.id
@@ -140,6 +140,20 @@ module FixtureFarm
           file.write(yaml)
         end
       end
+    end
+
+    # Clear default_scope before finding associated model record.
+    # This, in particular, turns off ActsAsTenant, that otherwise
+    # might return no record if the tenant has changed by this point.
+    def find_assiciated_model_instance(model_instance, association)
+      associated_model_class = if association.polymorphic?
+                                 model_instance.public_send(association.foreign_type).safe_constantize
+                               else
+                                 association.klass
+                               end
+
+      id = model_instance.public_send(association.foreign_key)
+      associated_model_class.unscoped.find(id)
     end
 
     def serialize_attributes(value)
