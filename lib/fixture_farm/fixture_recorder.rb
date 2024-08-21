@@ -115,6 +115,8 @@ module FixtureFarm
           if belongs_to_association
             associated_model_instance = find_assiciated_model_instance(model_instance, belongs_to_association)
 
+            next unless associated_model_instance
+
             associated_fixture_name = named_new_fixtures.find do |_, fixture_model|
               fixture_model.id == associated_model_instance.id
             end&.first || associated_model_instance.fixture_name
@@ -154,6 +156,11 @@ module FixtureFarm
 
       id = model_instance.public_send(association.foreign_key)
       associated_model_class.unscoped.find(id)
+    rescue ActiveRecord::RecordNotFound
+      # In case of `belongs_to optional: true`, the associated record
+      # may have already been deleted by the time we record fixtures.
+      # We don't want to fail in this case.
+      nil
     end
 
     def serialize_attributes(value)
