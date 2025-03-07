@@ -65,7 +65,7 @@ To record in tests, wrap some code in `record_new_fixtures` block. For example:
 include FixtureFarm::TestHelper
 
 test 'some stuff does the right thing' do
-  record_new_fixtures('some_stuff') do |stop_recording|
+  record_new_fixtures do |stop_recording|
     user = User.create!(name: 'Bob')
     post = user.posts.create!(title: 'Stuff')
 
@@ -82,13 +82,15 @@ Running this test generates user and post fixtures. Now you can rewrite this tes
 
 ```ruby
 test 'some stuff does the right thing' do
-  user = users('some_stuff_user_1')
+  user = users('user_1')
 
   assert_difference 'user.published_posts.size' do
     user.posts.first.publish!
   end
 end
 ```
+
+`record_new_fixtures` accepts optional name prefix, that applies to all new fixture names.
 
 ## License
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).

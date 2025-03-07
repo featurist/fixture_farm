@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 module FixtureFarm
+  mattr_accessor :parent_models_to_ignore_when_naming_fixtures
+
   class FixtureRecorder
     STORE_PATH = Rails.root.join('tmp', 'fixture_farm_store.json')
 
@@ -8,6 +10,7 @@ module FixtureFarm
       @fixture_name_prefix = fixture_name_prefix
       @new_models = new_models
       @initial_now = Time.zone.now
+      @ignore_while_tree_walking = Set.new
     end
 
     def self.resume_recording_session
@@ -92,15 +95,41 @@ module FixtureFarm
     end
 
     def named_new_fixtures
-      @new_models.uniq(&:id).each_with_object({}) do |model_instance, named_new_fixtures|
-        new_fixture_name = "#{@fixture_name_prefix}_#{model_instance.class.name.underscore.gsub('/', '_')}_1"
+      @named_new_fixtures ||= begin
+                                (@new_models - @ignore_while_tree_walking.to_a).uniq(&:id).each_with_object({}) do |model_instance, named_new_fixtures|
+                                  @ignore_while_tree_walking.add(model_instance)
 
-        while named_new_fixtures[new_fixture_name]
-          new_fixture_name = new_fixture_name.sub(/_(\d+)$/, "_#{Regexp.last_match(1).to_i + 1}")
+                                  new_fixture_name = [
+                                    @fixture_name_prefix,
+                                    first_belongs_to_fixture_name(model_instance),
+                                    "#{model_instance.class.name.underscore.split('/').last}_1"
+                                  ].select(&:present?).join('_')
+
+                                  while named_new_fixtures[new_fixture_name]
+                                    new_fixture_name = new_fixture_name.sub(/_(\d+)$/, "_#{Regexp.last_match(1).to_i + 1}")
+                                  end
+
+                                  named_new_fixtures[new_fixture_name] = model_instance
+
+                                  @ignore_while_tree_walking.delete(model_instance)
+                                end
+                              end
+    end
+
+    def first_belongs_to_fixture_name(model_instance)
+      model_instance.class.reflect_on_all_associations.filter(&:belongs_to?).each do |association|
+        associated_model_instance = find_associated_model_instance(model_instance, association)
+
+        next unless associated_model_instance
+
+        next if FixtureFarm.parent_models_to_ignore_when_naming_fixtures.any? { _1.call(associated_model_instance) }
+
+        if (associated_model_instance_fixture_name = fixture_name(associated_model_instance))
+          return associated_model_instance_fixture_name
         end
-
-        named_new_fixtures[new_fixture_name] = model_instance
       end
+
+      nil
     end
 
     def update_fixture_files(named_new_fixtures)
@@ -113,15 +142,11 @@ module FixtureFarm
           end
 
           if belongs_to_association
-            associated_model_instance = find_assiciated_model_instance(model_instance, belongs_to_association)
+            associated_model_instance = find_associated_model_instance(model_instance, belongs_to_association)
 
             next unless associated_model_instance
 
-            associated_fixture_name = named_new_fixtures.find do |_, fixture_model|
-              fixture_model.id == associated_model_instance.id
-            end&.first || associated_model_instance.fixture_name
-
-            [belongs_to_association.name.to_s, associated_fixture_name]
+            [belongs_to_association.name.to_s, fixture_name(associated_model_instance)]
           elsif model_instance.column_for_attribute(k).type
             [k, serialize_attributes(v)]
           end
@@ -147,7 +172,7 @@ module FixtureFarm
     # Clear default_scope before finding associated model record.
     # This, in particular, turns off ActsAsTenant, that otherwise
     # might return no record if the tenant has changed by this point.
-    def find_assiciated_model_instance(model_instance, association)
+    def find_associated_model_instance(model_instance, association)
       associated_model_class = if association.polymorphic?
                                  model_instance.public_send(association.foreign_type).safe_constantize
                                else
@@ -237,6 +262,12 @@ module FixtureFarm
           end
         end
       end.except(:value_rest)
+    end
+
+    def fixture_name(model_instance)
+      named_new_fixtures.find do |_, fixture_model|
+        fixture_model.id == model_instance.id
+      end&.first || model_instance.fixture_name
     end
   end
 end

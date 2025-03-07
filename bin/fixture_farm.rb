@@ -10,9 +10,8 @@ end
 
 case ARGV[0]
 when 'record'
-  usage unless ARGV[1]
   FixtureFarm::FixtureRecorder.start_recording_session!(ARGV[1])
-  puts "Recording fixtures with prefix #{ARGV[1]}"
+  puts 'Recording fixtures' + ARGV[1].nil? ? '' : " with prefix #{ARGV[1]}"
 when 'status'
   puts "Recording is #{FixtureFarm::FixtureRecorder.recording_session_in_progress? ? 'on' : 'off'}"
 when 'stop'
