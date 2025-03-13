@@ -104,7 +104,7 @@ test 'authors fixtures must have at least one post' do
 end
 ```
 
-Now let's the option to automatically record missing fixtures:
+Now let's add the option to automatically record missing fixtures:
 
 ```ruby
 test 'authors fixtures must have at least one post' do
