@@ -104,6 +104,8 @@ test 'authors fixtures must have at least one post' do
 end
 ```
 
+Let's say this test is currently failing.
+
 Now let's add the option to automatically record missing fixtures:
 
 ```ruby
@@ -116,12 +118,13 @@ test 'authors fixtures must have at least one post' do
         author.posts.create!(text: 'some text')
       end
     end
-  else
-    assert_empty offending_records
   end
+
+  assert_empty offending_records
 end
 ```
 
+Running this test with `RECORD_FIXTURES=1` will generate missing fixture entries in `test/fixtures/posts.yml`. Now re-run the test again and it's passing.
 
 ## License
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
