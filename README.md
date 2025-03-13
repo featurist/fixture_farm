@@ -92,5 +92,36 @@ end
 
 `record_new_fixtures` accepts optional name prefix, that applies to all new fixture names.
 
+A more robust approach is to have dedicated fixture tests that normally fail, but can be optionally run in "record mode" (think VCR).
+
+For example, let's say we have `Author` model that `has_many :posts` and we require authors to have at least one post. Here's the test to enforce `authors` fixtures to comply with this rule:
+
+```ruby
+test 'authors fixtures must have at least one post' do
+  offending_records = Author.where.missing(:posts)
+
+  assert_empty offending_records
+end
+```
+
+Now let's the option to automatically record missing fixtures:
+
+```ruby
+test 'authors fixtures must have at least one post' do
+  offending_records = Author.where.missing(:posts)
+
+  if ENV['RECORD_FIXTURES']
+    record_new_fixtures do
+      offending_records.each do |author|
+        author.posts.create!(text: 'some text')
+      end
+    end
+  else
+    assert_empty offending_records
+  end
+end
+```
+
+
 ## License
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
