@@ -157,7 +157,11 @@ module FixtureFarm
 
         fixtures_file_path = model_instance.fixtures_file_path
 
-        fixtures = File.exist?(fixtures_file_path) ? YAML.load_file(fixtures_file_path, permitted_classes: [ActiveSupport::HashWithIndifferentAccess]) : {}
+        fixtures = if File.exist?(fixtures_file_path)
+                     YAML.load_file(fixtures_file_path, permitted_classes: [ActiveSupport::HashWithIndifferentAccess]) || {}
+                   else
+                     {}
+                   end
         fixtures[new_fixture_name] = yaml_attributes
 
         FileUtils.mkdir_p(fixtures_file_path.dirname)
