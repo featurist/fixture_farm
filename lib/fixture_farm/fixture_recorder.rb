@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module FixtureFarm
-  mattr_accessor :parent_models_to_ignore_when_naming_fixtures
+  mattr_accessor :parent_models_to_ignore_when_naming_fixtures, default: []
 
   class FixtureRecorder
     STORE_PATH = Rails.root.join('tmp', 'fixture_farm_store.json')
