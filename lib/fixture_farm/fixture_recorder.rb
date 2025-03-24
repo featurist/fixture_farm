@@ -177,13 +177,14 @@ module FixtureFarm
     # This, in particular, turns off ActsAsTenant, that otherwise
     # might return no record if the tenant has changed by this point.
     def find_associated_model_instance(model_instance, association)
+      id = model_instance.public_send(association.foreign_key) or return
+
       associated_model_class = if association.polymorphic?
                                  model_instance.public_send(association.foreign_type).safe_constantize
                                else
                                  association.klass
                                end
 
-      id = model_instance.public_send(association.foreign_key)
       associated_model_class.unscoped.find(id)
     rescue ActiveRecord::RecordNotFound
       # In case of `belongs_to optional: true`, the associated record
