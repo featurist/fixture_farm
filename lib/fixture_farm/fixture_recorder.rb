@@ -201,6 +201,8 @@ module FixtureFarm
         value.iso8601
       when BigDecimal
         value.to_f
+      when Hash
+        value.to_json
       else
         value
       end

@@ -11,6 +11,7 @@ Generated fixture that `belongs_to` a record from an existing fixture, will refe
 
 - doesn't update fixtures
 - doesn't delete fixtures
+- assumes that all serialized attributes are json (so that at least ActiveStorage::Blob metadata is correctly represented; it really should be Rails serializing attributes according to their respective coders when inserting fixtures into the database, but, alas, this isn't happening)
 
 ## Installation
 
