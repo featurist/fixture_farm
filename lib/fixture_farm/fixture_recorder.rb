@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module FixtureFarm
-  mattr_accessor :parent_models_to_ignore_when_naming_fixtures, default: []
+  mattr_accessor :low_priority_parent_model_for_naming, default: -> { false }
 
   class FixtureRecorder
     STORE_PATH = Rails.root.join('tmp', 'fixture_farm_store.json')
@@ -117,19 +117,23 @@ module FixtureFarm
     end
 
     def first_belongs_to_fixture_name(model_instance)
+      low_priority_name = nil
+
       model_instance.class.reflect_on_all_associations.filter(&:belongs_to?).each do |association|
         associated_model_instance = find_associated_model_instance(model_instance, association)
 
         next unless associated_model_instance
 
-        next if FixtureFarm.parent_models_to_ignore_when_naming_fixtures.any? { _1.call(associated_model_instance) }
-
         if (associated_model_instance_fixture_name = fixture_name(associated_model_instance))
-          return associated_model_instance_fixture_name
+          if FixtureFarm.low_priority_parent_model_for_naming.call(associated_model_instance)
+            low_priority_name = associated_model_instance_fixture_name
+          else
+            return associated_model_instance_fixture_name
+          end
         end
       end
 
-      nil
+      low_priority_name
     end
 
     def update_fixture_files(named_new_fixtures)

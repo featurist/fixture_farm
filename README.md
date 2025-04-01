@@ -127,5 +127,15 @@ end
 
 Running this test with `RECORD_FIXTURES=1` will generate missing fixture entries in `test/fixtures/posts.yml`. Now re-run the test again and it's passing.
 
+### Automatic fixture naming
+
+Generated fixture names are based on the first `belongs_to` association of the model. E.g., if a new post fixtures belongs_to to a user fixture `bob`, the name is going to be `bob_post_1`.
+
+It's possible to lower the priority of given parent assiciations when it comes to naming, so that certain names are only picked when there are no other suitable parent associations. This is useful, for example, to exclude `acts_as_tenant` association:
+
+```ruby
+FixtureFarm.low_priority_parent_model_for_naming = -> { _1.is_a?(TenantModel) }
+```
+
 ## License
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
