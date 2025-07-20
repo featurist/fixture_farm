@@ -17,14 +17,12 @@ module FixtureFarm
       existing_fixtures_file_path || candidate_fixtures_file_path
     end
 
+    private
+
     def candidate_fixtures_file_path
       klass = self.class
-      loop do
-        path = Rails.root.join('test', 'fixtures', "#{klass.to_s.underscore.pluralize}.yml")
-        return path if klass >= ActiveRecord::Base || !klass.columns.map(&:name).include?(klass.inheritance_column)
 
-        klass = klass.superclass
-      end
+      Rails.root.join('test', 'fixtures', "#{klass.to_s.underscore.pluralize}.yml")
     end
 
     def existing_fixtures_file_path
@@ -32,6 +30,7 @@ module FixtureFarm
 
       while klass < ActiveRecord::Base
         path = Rails.root.join('test', 'fixtures', "#{klass.to_s.underscore.pluralize}.yml")
+
         return path if File.exist?(path)
 
         klass = klass.superclass

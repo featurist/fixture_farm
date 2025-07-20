@@ -1,0 +1,8 @@
+admins:
+  name: Administrators
+
+developers:
+  name: Developers
+
+users:
+  name: Users

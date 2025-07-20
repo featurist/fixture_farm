@@ -1,0 +1,11 @@
+user_welcome:
+  message: "Welcome Existing User!"
+  notifiable: existing_user (User)
+
+post_notification:
+  message: "New post: Existing Post"
+  notifiable: existing_post (Post)
+
+another_user_welcome:
+  message: "Welcome Another User!"
+  notifiable: another_existing_user (User)

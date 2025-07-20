@@ -6,9 +6,11 @@ module FixtureFarm
   module Hook
     def record_new_fixtures(&block)
       fixture_recorder = FixtureRecorder.resume_recording_session
-      fixture_recorder.record_new_fixtures { block.call }
-    ensure
-      fixture_recorder.update_recording_session
+      begin
+        fixture_recorder.record_new_fixtures { block.call }
+      ensure
+        fixture_recorder.update_recording_session
+      end
     end
 
     private

@@ -1,0 +1,11 @@
+special_user:
+  name: Special User
+  email: special@example.com
+  type: InheritedModel
+  special_field: "Special value for inherited model"
+
+premium_user:
+  name: Premium User
+  email: premium@example.com
+  type: InheritedModel
+  special_field: "Premium access enabled"

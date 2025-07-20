@@ -1,0 +1,11 @@
+company_announcement:
+  title: Company Wide Announcement
+  tenant_model: company_a
+
+product_update:
+  title: Product Update for Q4
+  tenant_model: company_b
+
+org_news:
+  title: Organization News
+  tenant_model: organization_x

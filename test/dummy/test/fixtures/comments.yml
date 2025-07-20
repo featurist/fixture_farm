@@ -1,0 +1,14 @@
+first_comment:
+  content: This is a great post!
+  user: existing_user
+  post: existing_post
+
+second_comment:
+  content: I agree with the previous comment.
+  user: another_existing_user
+  post: existing_post
+
+another_comment:
+  content: Looking forward to more content like this.
+  user: existing_user
+  post: existing_post

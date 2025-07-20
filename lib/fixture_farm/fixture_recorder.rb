@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module FixtureFarm
-  mattr_accessor :low_priority_parent_model_for_naming, default: -> { false }
+  mattr_accessor :low_priority_parent_model_for_naming
 
   class FixtureRecorder
     STORE_PATH = Rails.root.join('tmp', 'fixture_farm_store.json')
@@ -96,12 +96,11 @@ module FixtureFarm
 
     def named_new_fixtures
       @named_new_fixtures ||= begin
-                                (@new_models - @ignore_while_tree_walking.to_a).uniq(&:id).each_with_object({}) do |model_instance, named_new_fixtures|
+                                (@new_models.uniq - @ignore_while_tree_walking.to_a).each_with_object({}) do |model_instance, named_new_fixtures|
                                   @ignore_while_tree_walking.add(model_instance)
 
                                   new_fixture_name = [
-                                    @fixture_name_prefix,
-                                    first_belongs_to_fixture_name(model_instance),
+                                    first_belongs_to_fixture_name(model_instance).presence || @fixture_name_prefix,
                                     "#{model_instance.class.name.underscore.split('/').last}_1"
                                   ].select(&:present?).join('_')
 
@@ -125,7 +124,7 @@ module FixtureFarm
         next unless associated_model_instance
 
         if (associated_model_instance_fixture_name = fixture_name(associated_model_instance))
-          if FixtureFarm.low_priority_parent_model_for_naming.call(associated_model_instance)
+          if FixtureFarm.low_priority_parent_model_for_naming&.call(associated_model_instance)
             low_priority_name = associated_model_instance_fixture_name
           else
             return associated_model_instance_fixture_name

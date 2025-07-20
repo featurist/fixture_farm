@@ -1,0 +1,11 @@
+admin_membership:
+  user: existing_user
+  group: admins
+
+dev_membership:
+  user: another_existing_user
+  group: developers
+
+user_membership:
+  user: another_existing_user
+  group: users

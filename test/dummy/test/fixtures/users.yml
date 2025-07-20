@@ -1,0 +1,7 @@
+existing_user:
+  name: Existing User
+  email: existing@example.com
+
+another_existing_user:
+  name: Another User
+  email: another@example.com
