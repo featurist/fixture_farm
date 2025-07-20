@@ -15,6 +15,7 @@ Gem::Specification.new do |spec|
 
   spec.metadata['homepage_uri'] = spec.homepage
   spec.metadata['source_code_uri'] = 'https://github.com/featurist/fixture_farm.git'
+  spec.metadata['rubygems_mfa_required'] = 'true'
 
   spec.files = Dir['lib/**/*', 'MIT-LICENSE', 'Rakefile', 'README.md']
   spec.bindir        = 'bin'

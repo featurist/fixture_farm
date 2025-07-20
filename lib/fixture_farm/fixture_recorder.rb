@@ -95,24 +95,23 @@ module FixtureFarm
     end
 
     def named_new_fixtures
-      @named_new_fixtures ||= begin
-                                (@new_models.uniq - @ignore_while_tree_walking.to_a).each_with_object({}) do |model_instance, named_new_fixtures|
-                                  @ignore_while_tree_walking.add(model_instance)
+      @named_new_fixtures ||= (@new_models.uniq - @ignore_while_tree_walking.to_a).each_with_object({}) do |model_instance, named_new_fixtures|
+        @ignore_while_tree_walking.add(model_instance)
 
-                                  new_fixture_name = [
-                                    first_belongs_to_fixture_name(model_instance).presence || @fixture_name_prefix,
-                                    "#{model_instance.class.name.underscore.split('/').last}_1"
-                                  ].select(&:present?).join('_')
+        new_fixture_name = [
+          first_belongs_to_fixture_name(model_instance).presence || @fixture_name_prefix,
+          "#{model_instance.class.name.underscore.split('/').last}_1"
+        ].select(&:present?).join('_')
 
-                                  while named_new_fixtures[new_fixture_name]
-                                    new_fixture_name = new_fixture_name.sub(/_(\d+)$/, "_#{Regexp.last_match(1).to_i + 1}")
-                                  end
+        while named_new_fixtures[new_fixture_name]
+          new_fixture_name = new_fixture_name.sub(/_(\d+)$/,
+                                                  "_#{Regexp.last_match(1).to_i + 1}")
+        end
 
-                                  named_new_fixtures[new_fixture_name] = model_instance
+        named_new_fixtures[new_fixture_name] = model_instance
 
-                                  @ignore_while_tree_walking.delete(model_instance)
-                                end
-                              end
+        @ignore_while_tree_walking.delete(model_instance)
+      end
     end
 
     def first_belongs_to_fixture_name(model_instance)
@@ -123,13 +122,12 @@ module FixtureFarm
 
         next unless associated_model_instance
 
-        if (associated_model_instance_fixture_name = fixture_name(associated_model_instance))
-          if FixtureFarm.low_priority_parent_model_for_naming&.call(associated_model_instance)
-            low_priority_name = associated_model_instance_fixture_name
-          else
-            return associated_model_instance_fixture_name
-          end
+        next unless (associated_model_instance_fixture_name = fixture_name(associated_model_instance))
+        unless FixtureFarm.low_priority_parent_model_for_naming&.call(associated_model_instance)
+          return associated_model_instance_fixture_name
         end
+
+        low_priority_name = associated_model_instance_fixture_name
       end
 
       low_priority_name
@@ -215,7 +213,7 @@ module FixtureFarm
       if value.to_datetime.minute == 59
         value += 1.minute
         value = value.beginning_of_hour
-      elsif value.to_datetime.minute == 1 || value.to_datetime.minute == 0
+      elsif [1, 0].include?(value.to_datetime.minute)
         value = value.beginning_of_hour
       end
       value

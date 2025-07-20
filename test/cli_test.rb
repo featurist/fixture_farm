@@ -1,3 +1,6 @@
+# frozen_string_literal: true
+
+require 'English'
 require 'test_helper'
 
 class CLITest < ActiveSupport::TestCase
@@ -83,7 +86,7 @@ class CLITest < ActiveSupport::TestCase
   def run_cli(args)
     command = "cd #{Rails.root} && bundle exec ../../bin/fixture_farm #{args.join(' ')}"
     output = `#{command} 2>&1`
-    exit_code = $?.exitstatus
+    exit_code = $CHILD_STATUS.exitstatus
     { output: output, exit_code: exit_code }
   end
 end

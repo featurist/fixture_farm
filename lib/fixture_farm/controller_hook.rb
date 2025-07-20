@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "fixture_farm/hook"
+require 'fixture_farm/hook'
 
 module FixtureFarm
   module ControllerHook

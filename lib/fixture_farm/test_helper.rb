@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "fixture_farm/fixture_recorder"
+require 'fixture_farm/fixture_recorder'
 
 module FixtureFarm
   module TestHelper

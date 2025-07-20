@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'test_helper'
 
 class TestHookController < ApplicationController
@@ -18,14 +20,14 @@ class ControllerHookTest < ActionDispatch::IntegrationTest
     Rails.application.routes.draw do
       post '/test_hook/create_user', to: 'test_hook#create_user'
 
-      post '/start_recording', to: ->(env) {
+      post '/start_recording', to: lambda { |_env|
         FakeFS.activate!
         FixtureFarm::FixtureRecorder.start_recording_session!('controller_capture')
 
         [200, {}, ['']]
       }
 
-      post '/stop_recording', to: ->(env) {
+      post '/stop_recording', to: lambda { |_env|
         FixtureFarm::FixtureRecorder.stop_recording_session!
 
         [200, {}, ['']]

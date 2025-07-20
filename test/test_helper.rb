@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Configure Rails Environment
 ENV['RAILS_ENV'] = 'test'
 
@@ -16,27 +18,30 @@ ActiveRecord::Base.establish_connection(
 ActiveRecord::Schema.verbose = false
 load Rails.root.join('db', 'schema.rb')
 
-class ActiveSupport::TestCase
-  self.use_transactional_tests = true
+module ActiveSupport
+  class TestCase
+    self.use_transactional_tests = true
 
-  fixtures :all
+    fixtures :all
 
-  setup do
-    FakeFS.activate!
-    FakeFS::FileSystem.clone(Rails.root)
+    setup do
+      FakeFS.activate!
+      FakeFS::FileSystem.clone(Rails.root)
 
-    # Clone locale files so I18n works (model validation errors)
-    %w[active_model active_record action_view active_support].each do |gem_name|
-      locale_path = File.join(Gem.loaded_specs[gem_name.sub('_', '')].full_gem_path, 'lib', gem_name, 'locale')
+      # Clone locale files so I18n works (model validation errors)
+      %w[active_model active_record action_view active_support].each do |gem_name|
+        locale_path = File.join(Gem.loaded_specs[gem_name.sub('_', '')].full_gem_path, 'lib', gem_name, 'locale')
+        FakeFS::FileSystem.clone(locale_path)
+      end
+
+      locale_path = File.join(Gem.loaded_specs['actionpack'].full_gem_path, 'lib', 'action_dispatch', 'middleware',
+                              'templates')
       FakeFS::FileSystem.clone(locale_path)
     end
 
-    locale_path = File.join(Gem.loaded_specs['actionpack'].full_gem_path, 'lib', 'action_dispatch', 'middleware', 'templates')
-    FakeFS::FileSystem.clone(locale_path)
-  end
-
-  teardown do
-    FixtureFarm::FixtureRecorder.stop_recording_session!
-    FakeFS.deactivate!
+    teardown do
+      FixtureFarm::FixtureRecorder.stop_recording_session!
+      FakeFS.deactivate!
+    end
   end
 end
