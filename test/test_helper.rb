@@ -34,9 +34,17 @@ module ActiveSupport
         FakeFS::FileSystem.clone(locale_path)
       end
 
-      locale_path = File.join(Gem.loaded_specs['actionpack'].full_gem_path, 'lib', 'action_dispatch', 'middleware',
-                              'templates')
-      FakeFS::FileSystem.clone(locale_path)
+      rails_templates_path = File.join(
+        Gem.loaded_specs['actionpack'].full_gem_path,
+        'lib',
+        'action_dispatch',
+        'middleware',
+        'templates'
+      )
+      FakeFS::FileSystem.clone(rails_templates_path)
+
+      action_cable_path = File.join(Gem.loaded_specs['actioncable'].full_gem_path, 'lib', 'action_cable')
+      FakeFS::FileSystem.clone(action_cable_path)
     end
 
     teardown do
