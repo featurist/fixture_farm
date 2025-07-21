@@ -6,6 +6,8 @@ module FixtureFarm
   module Hook
     def record_new_fixtures(&block)
       fixture_recorder = FixtureRecorder.resume_recording_session
+      return unless fixture_recorder # Bail if session was stopped due to error
+
       begin
         fixture_recorder.record_new_fixtures { block.call }
       ensure

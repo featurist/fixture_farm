@@ -226,4 +226,44 @@ class FixtureRecorderTest < ActiveSupport::TestCase
     assert_equal 'Test Inherited', fixtures['sti_test_inherited_model_1']['name']
     assert_equal 'Special Value', fixtures['sti_test_inherited_model_1']['special_field']
   end
+
+  test 'recording_session_in_progress? returns false when session has error field' do
+    # Create session file with error
+    File.write(FixtureFarm::FixtureRecorder::STORE_PATH, {
+      fixture_name_prefix: 'test_prefix',
+      new_models: [],
+      error: 'database was externally modified/reset'
+    }.to_json)
+
+    refute FixtureFarm::FixtureRecorder.recording_session_in_progress?
+  end
+
+  test 'recording_session_in_progress? returns true when session exists without error field' do
+    File.write(FixtureFarm::FixtureRecorder::STORE_PATH, {
+      fixture_name_prefix: 'test_prefix',
+      new_models: []
+    }.to_json)
+
+    assert FixtureFarm::FixtureRecorder.recording_session_in_progress?
+  end
+
+  test 'resume_recording_session handles missing records by adding error to session' do
+    # Create session file with non-existent model ID
+    File.write(FixtureFarm::FixtureRecorder::STORE_PATH, {
+      fixture_name_prefix: 'test_prefix',
+      new_models: [['User', 99_999]] # Non-existent ID
+    }.to_json)
+
+    # This should return nil and not raise an error
+    recorder = FixtureFarm::FixtureRecorder.resume_recording_session
+    assert_nil recorder
+
+    # Check that session now contains error
+    session_data = JSON.parse(File.read(FixtureFarm::FixtureRecorder::STORE_PATH))
+    assert session_data['error']
+    assert_equal 'database was externally modified/reset', session_data['error']
+
+    # And recording should now be considered stopped
+    refute FixtureFarm::FixtureRecorder.recording_session_in_progress?
+  end
 end

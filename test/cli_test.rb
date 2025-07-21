@@ -81,6 +81,19 @@ class CLITest < ActiveSupport::TestCase
     assert_equal 1, result[:exit_code]
   end
 
+  test 'CLI status command shows error when session has error field' do
+    # Create session file with error
+    File.write(FixtureFarm::FixtureRecorder::STORE_PATH, {
+      fixture_name_prefix: 'test_prefix',
+      new_models: [],
+      error: 'database was externally modified/reset'
+    }.to_json)
+
+    result = run_cli(['status'])
+    assert_match(%r{Recording is off \(database was externally modified/reset\)}, result[:output])
+    assert_equal 0, result[:exit_code]
+  end
+
   private
 
   def run_cli(args)

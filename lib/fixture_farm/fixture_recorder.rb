@@ -16,13 +16,18 @@ module FixtureFarm
     def self.resume_recording_session
       start_recording_session! unless recording_session_in_progress?
 
-      recording_session = JSON.load_file(STORE_PATH, permitted_classes: [ActiveSupport::HashWithIndifferentAccess])
+      recording_session = load_recording_session
 
       new_models = recording_session['new_models'].map do |(class_name, id)|
         class_name.constantize.find(id)
       end
 
       new(recording_session['fixture_name_prefix'], new_models)
+    rescue ActiveRecord::RecordNotFound
+      # External interference with database (e.g. fixtures:load)
+      recording_session['error'] = 'database was externally modified/reset'
+      File.write(STORE_PATH, recording_session.to_json)
+      nil
     end
 
     def self.start_recording_session!(fixture_name_prefix)
@@ -37,7 +42,23 @@ module FixtureFarm
     end
 
     def self.recording_session_in_progress?
-      File.exist?(STORE_PATH)
+      recording_session = load_recording_session
+      return false unless recording_session
+
+      !recording_session['error']
+    end
+
+    def self.load_recording_session
+      return nil unless File.exist?(STORE_PATH)
+
+      JSON.load_file(STORE_PATH, permitted_classes: [ActiveSupport::HashWithIndifferentAccess])
+    end
+
+    def self.last_session_error
+      recording_session = load_recording_session
+      return nil unless recording_session
+
+      recording_session['error']
     end
 
     def record_new_fixtures

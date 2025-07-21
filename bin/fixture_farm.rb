@@ -13,7 +13,13 @@ when 'record'
   FixtureFarm::FixtureRecorder.start_recording_session!(ARGV[1])
   puts "Recording fixtures#{" with prefix #{ARGV[1]}" unless ARGV[1].nil?}"
 when 'status'
-  puts "Recording is #{FixtureFarm::FixtureRecorder.recording_session_in_progress? ? 'on' : 'off'}"
+  if FixtureFarm::FixtureRecorder.recording_session_in_progress?
+    puts 'Recording is on'
+  elsif (error = FixtureFarm::FixtureRecorder.last_session_error)
+    puts "Recording is off (#{error})"
+  else
+    puts 'Recording is off'
+  end
 when 'stop'
   FixtureFarm::FixtureRecorder.stop_recording_session!
   puts 'Stopped recording'
