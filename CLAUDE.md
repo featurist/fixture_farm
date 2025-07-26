@@ -92,9 +92,9 @@ Include `FixtureFarm::TestHelper` in your test classes to use `record_new_fixtur
 
 ```ruby
 test 'example' do
-  record_new_fixtures('prefix') do |stop_recording|
+  record_new_fixtures('prefix') do |recorder|
     # Create models here
-    stop_recording.call # Optional early stop
+    recorder.stop! # Optional early stop
   end
 end
 ```

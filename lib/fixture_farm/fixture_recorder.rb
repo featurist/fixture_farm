@@ -62,9 +62,9 @@ module FixtureFarm
     end
 
     def record_new_fixtures
-      stopped = false
+      @stopped = false
 
-      subscriber = ActiveSupport::Notifications.subscribe 'sql.active_record' do |event|
+      @subscriber = ActiveSupport::Notifications.subscribe 'sql.active_record' do |event|
         payload = event.payload
 
         next unless payload[:name] =~ /([:\w]+) Create/
@@ -78,19 +78,18 @@ module FixtureFarm
         end
       end
 
-      yield lambda {
-        ActiveSupport::Notifications.unsubscribe(subscriber)
-        stopped = true
-        reload_models
-        update_fixture_files(named_new_fixtures)
-      }
+      yield self
 
-      unless stopped
-        reload_models
-        update_fixture_files(named_new_fixtures)
-      end
+      stop! unless @stopped
     ensure
-      ActiveSupport::Notifications.unsubscribe(subscriber)
+      ActiveSupport::Notifications.unsubscribe(@subscriber)
+    end
+
+    def stop!
+      ActiveSupport::Notifications.unsubscribe(@subscriber)
+      @stopped = true
+      reload_models
+      update_fixture_files(named_new_fixtures)
     end
 
     def update_recording_session
@@ -100,19 +99,6 @@ module FixtureFarm
         fixture_name_prefix: @fixture_name_prefix,
         new_models: @new_models.map { |model| [model.class.name, model.id] }
       }.to_json)
-    end
-
-    private
-
-    def reload_models
-      @new_models = @new_models.map do |model_instance|
-        # reload in case model was updated after initial create
-        model_instance.reload
-        # Some records are created and then later removed.
-        # We don't want to turn those into fixtures
-      rescue ActiveRecord::RecordNotFound
-        nil
-      end.compact
     end
 
     def named_new_fixtures
@@ -133,6 +119,19 @@ module FixtureFarm
 
         @ignore_while_tree_walking.delete(model_instance)
       end
+    end
+
+    private
+
+    def reload_models
+      @new_models = @new_models.map do |model_instance|
+        # reload in case model was updated after initial create
+        model_instance.reload
+        # Some records are created and then later removed.
+        # We don't want to turn those into fixtures
+      rescue ActiveRecord::RecordNotFound
+        nil
+      end.compact
     end
 
     def first_belongs_to_fixture_name(model_instance)

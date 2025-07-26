@@ -66,11 +66,11 @@ To record in tests, wrap some code in `record_new_fixtures` block. For example:
 include FixtureFarm::TestHelper
 
 test 'some stuff does the right thing' do
-  record_new_fixtures do |stop_recording|
+  record_new_fixtures do |recorder|
     user = User.create!(name: 'Bob')
     post = user.posts.create!(title: 'Stuff')
 
-    stop_recording.call
+    recorder.stop!
 
     assert_difference 'user.published_posts.size' do
       post.publish!

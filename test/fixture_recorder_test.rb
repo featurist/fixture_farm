@@ -61,9 +61,9 @@ class FixtureRecorderTest < ActiveSupport::TestCase
   test 'record_new_fixtures allows early stopping' do
     recorder = FixtureFarm::FixtureRecorder.new(nil)
 
-    recorder.record_new_fixtures do |stop_recording|
+    recorder.record_new_fixtures do |recorder|
       User.create!(name: 'Test User', email: 'test@example.com')
-      stop_recording.call
+      recorder.stop!
       User.create!(name: 'Test User 2', email: 'test2@example.com')
     end
 
@@ -135,14 +135,14 @@ class FixtureRecorderTest < ActiveSupport::TestCase
     recorder = FixtureFarm::FixtureRecorder.new('delete_test')
 
     user_to_delete = nil
-    recorder.record_new_fixtures do |stop_recording|
+    recorder.record_new_fixtures do |recorder|
       user_to_delete = User.create!(name: 'User to Delete', email: 'delete@example.com')
       User.create!(name: 'User to Keep', email: 'keep@example.com')
 
       # Delete the first user before recording ends
       user_to_delete.destroy!
 
-      stop_recording.call
+      recorder.stop!
     end
 
     fixtures = YAML.load_file(Rails.root.join('test', 'fixtures', 'users.yml'))

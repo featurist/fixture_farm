@@ -26,9 +26,9 @@ class TestHelperTest < ActiveSupport::TestCase
   end
 
   test 'record_new_fixtures allows early stopping' do
-    record_new_fixtures('early_stop') do |stop_recording|
+    record_new_fixtures('early_stop') do |recorder|
       User.create!(name: 'First User', email: 'first@example.com')
-      stop_recording.call
+      recorder.stop!
       User.create!(name: 'Second User', email: 'second@example.com')
     end
 
