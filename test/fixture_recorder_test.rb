@@ -266,4 +266,89 @@ class FixtureRecorderTest < ActiveSupport::TestCase
     # And recording should now be considered stopped
     refute FixtureFarm::FixtureRecorder.recording_session_in_progress?
   end
+
+  test 'deletes specific fixture when model is destroyed but keeps others' do
+    recorder = FixtureFarm::FixtureRecorder.new('delete_test')
+
+    recorder.record_new_fixtures do
+      user = users(:existing_user)
+      user.destroy!
+    end
+
+    fixtures = YAML.load_file(Rails.root.join('test', 'fixtures', 'users.yml'))
+
+    # Should not contain the deleted user fixture
+    refute fixtures.key?('existing_user')
+
+    # Should still contain the other user fixture
+    assert fixtures.key?('another_existing_user')
+    assert_equal 'Another User', fixtures['another_existing_user']['name']
+  end
+
+  test 'deletes entire fixture file when all posts are removed' do
+    posts_file = Rails.root.join('test', 'fixtures', 'posts.yml')
+
+    assert File.exist?(posts_file)
+
+    recorder = FixtureFarm::FixtureRecorder.new('clear_all_test')
+
+    recorder.record_new_fixtures do
+      # Delete all existing posts
+      Post.destroy_all
+    end
+
+    # Posts file should be completely removed since no fixtures remain
+    refute File.exist?(posts_file)
+  end
+
+  test 'deletes dependent memberships when group is destroyed' do
+    # Verify fixtures exist initially
+    membership_fixtures = YAML.load_file(Rails.root.join('test', 'fixtures', 'memberships.yml'))
+
+    assert membership_fixtures.key?('admin_membership')
+
+    recorder = FixtureFarm::FixtureRecorder.new('group_delete_test')
+
+    recorder.record_new_fixtures do
+      group = groups(:admins)
+      group.destroy!
+    end
+
+    group_fixtures = YAML.load_file(Rails.root.join('test', 'fixtures', 'groups.yml'))
+    membership_fixtures = YAML.load_file(Rails.root.join('test', 'fixtures', 'memberships.yml'))
+
+    refute group_fixtures.key?('admins')
+    refute membership_fixtures.key?('admin_membership')
+
+    assert group_fixtures.key?('users')
+    assert membership_fixtures.key?('user_membership')
+  end
+
+  test 'reuses deleted fixture names when creating new fixtures' do
+    # Verify user_3 fixture exists initially
+    initial_fixtures = YAML.load_file(Rails.root.join('test', 'fixtures', 'users.yml'))
+    assert initial_fixtures.key?('user_3')
+
+    recorder = FixtureFarm::FixtureRecorder.new(nil)
+
+    recorder.record_new_fixtures do
+      # Delete the user_3 fixture
+      user = users(:user_3)
+      user.destroy!
+
+      # Create three new users
+      User.create!(name: 'New User 1', email: 'new1@example.com')
+      User.create!(name: 'New User 2', email: 'new2@example.com')
+      User.create!(name: 'New User 3', email: 'new3@example.com')
+    end
+
+    fixtures = YAML.load_file(Rails.root.join('test', 'fixtures', 'users.yml'))
+
+    # Should reuse the deleted name and generate user_1, user_2, user_3
+    # But current implementation will likely generate user_1, user_2, user_4
+    assert fixtures.key?('user_1')
+    assert fixtures.key?('user_2')
+    assert fixtures.key?('user_3'), 'Should reuse deleted fixture name user_3'
+    refute fixtures.key?('user_4'), 'Should not generate user_4 when user_3 is available'
+  end
 end

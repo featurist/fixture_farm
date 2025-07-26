@@ -5,3 +5,7 @@ existing_user:
 another_existing_user:
   name: Another User
   email: another@example.com
+
+user_3:
+  name: Third User
+  email: third@example.com
