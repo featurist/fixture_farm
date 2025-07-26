@@ -10,7 +10,7 @@ module FixtureFarm
       @fixture_name_prefix = fixture_name_prefix
       @new_models = new_models
       @initial_now = Time.zone.now
-      @ignore_while_tree_walking = Set.new
+      @named_new_fixtures = {}
     end
 
     def self.resume_recording_session
@@ -102,23 +102,11 @@ module FixtureFarm
     end
 
     def named_new_fixtures
-      @named_new_fixtures ||= (@new_models.uniq - @ignore_while_tree_walking.to_a).each_with_object({}) do |model_instance, named_new_fixtures|
-        @ignore_while_tree_walking.add(model_instance)
-
-        new_fixture_name = [
-          first_belongs_to_fixture_name(model_instance).presence || @fixture_name_prefix,
-          "#{model_instance.class.name.underscore.split('/').last}_1"
-        ].select(&:present?).join('_')
-
-        while named_new_fixtures[new_fixture_name]
-          new_fixture_name = new_fixture_name.sub(/_(\d+)$/,
-                                                  "_#{Regexp.last_match(1).to_i + 1}")
-        end
-
-        named_new_fixtures[new_fixture_name] = model_instance
-
-        @ignore_while_tree_walking.delete(model_instance)
+      @new_models.uniq.each do |model_instance|
+        ensure_new_fixture_name(model_instance)
       end
+
+      @named_new_fixtures
     end
 
     private
@@ -142,7 +130,8 @@ module FixtureFarm
 
         next unless associated_model_instance
 
-        next unless (associated_model_instance_fixture_name = fixture_name(associated_model_instance))
+        next unless (associated_model_instance_fixture_name = ensure_new_fixture_name(associated_model_instance))
+
         unless FixtureFarm.low_priority_parent_model_for_naming&.call(associated_model_instance)
           return associated_model_instance_fixture_name
         end
@@ -292,8 +281,25 @@ module FixtureFarm
       end.except(:value_rest)
     end
 
+    def ensure_new_fixture_name(model_instance)
+      fixture_name(model_instance) || begin
+        new_fixture_name = [
+          first_belongs_to_fixture_name(model_instance).presence || @fixture_name_prefix,
+          "#{model_instance.class.name.underscore.split('/').last}_1"
+        ].select(&:present?).join('_')
+
+        while @named_new_fixtures[new_fixture_name]
+          new_fixture_name = new_fixture_name.sub(/_(\d+)$/, "_#{Regexp.last_match(1).to_i + 1}")
+        end
+
+        @named_new_fixtures[new_fixture_name] = model_instance
+
+        new_fixture_name
+      end
+    end
+
     def fixture_name(model_instance)
-      named_new_fixtures.find do |_, fixture_model|
+      @named_new_fixtures.find do |_, fixture_model|
         fixture_model.id == model_instance.id
       end&.first || model_instance.fixture_name
     end
