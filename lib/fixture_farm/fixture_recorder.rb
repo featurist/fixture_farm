@@ -9,6 +9,7 @@ module FixtureFarm
     def initialize(fixture_name_prefix, new_models = [])
       @fixture_name_prefix = fixture_name_prefix
       @new_models = new_models
+      @deleted_models = []
       @initial_now = Time.zone.now
       @named_new_fixtures = {}
     end
@@ -67,14 +68,16 @@ module FixtureFarm
       @subscriber = ActiveSupport::Notifications.subscribe 'sql.active_record' do |event|
         payload = event.payload
 
-        next unless payload[:name] =~ /([:\w]+) Create/
+        if payload[:name] =~ /([:\w]+) Create/
+          new_fixture_class_name = Regexp.last_match(1)
 
-        new_fixture_class_name = Regexp.last_match(1)
+          payload[:connection].transaction_manager.current_transaction.records.reject(&:persisted?).reject(&:destroyed?).each do |model_instance|
+            next if new_fixture_class_name != model_instance.class.name
 
-        payload[:connection].transaction_manager.current_transaction.records.reject(&:persisted?).reject(&:destroyed?).each do |model_instance|
-          next if new_fixture_class_name != model_instance.class.name
-
-          @new_models << model_instance
+            @new_models << model_instance
+          end
+        elsif payload[:name] =~ /([:\w]+) Destroy/
+          @deleted_models.push *payload[:connection].transaction_manager.current_transaction.records
         end
       end
 
@@ -88,7 +91,8 @@ module FixtureFarm
     def stop!
       ActiveSupport::Notifications.unsubscribe(@subscriber)
       @stopped = true
-      reload_models
+      reload_new_models
+      delete_fixtures_for_deleted_models
       update_fixture_files(named_new_fixtures)
     end
 
@@ -111,7 +115,7 @@ module FixtureFarm
 
     private
 
-    def reload_models
+    def reload_new_models
       @new_models = @new_models.map do |model_instance|
         # reload in case model was updated after initial create
         model_instance.reload
@@ -279,6 +283,28 @@ module FixtureFarm
           end
         end
       end.except(:value_rest)
+    end
+
+    def delete_fixtures_for_deleted_models
+      @deleted_models.uniq.each do |deleted_model|
+        fixture_name = deleted_model.fixture_name
+        next unless fixture_name
+
+        fixtures_file_path = deleted_model.fixtures_file_path
+
+        fixtures = YAML.load_file(fixtures_file_path, permitted_classes: [ActiveSupport::HashWithIndifferentAccess]) || {}
+
+        if fixtures.delete(fixture_name)
+          if fixtures.empty?
+            File.delete(fixtures_file_path)
+          else
+            File.open(fixtures_file_path, 'w') do |file|
+              yaml = YAML.dump(fixtures).gsub(/\n(?=[^\s])/, "\n\n").delete_prefix("---\n\n")
+              file.write(yaml)
+            end
+          end
+        end
+      end
     end
 
     def ensure_new_fixture_name(model_instance)
