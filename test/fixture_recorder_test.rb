@@ -345,10 +345,10 @@ class FixtureRecorderTest < ActiveSupport::TestCase
     fixtures = YAML.load_file(Rails.root.join('test', 'fixtures', 'users.yml'))
 
     # Should reuse the deleted name and generate user_1, user_2, user_3
-    # But current implementation will likely generate user_1, user_2, user_4
     assert fixtures.key?('user_1')
     assert fixtures.key?('user_2')
     assert fixtures.key?('user_3'), 'Should reuse deleted fixture name user_3'
+    assert_equal 'New User 3', fixtures['user_3']['name'], 'user_3 should contain New User 3'
     refute fixtures.key?('user_4'), 'Should not generate user_4 when user_3 is available'
   end
 

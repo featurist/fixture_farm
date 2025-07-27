@@ -9,9 +9,10 @@ module FixtureFarm
     def initialize(fixture_name_prefix, new_models = [])
       @fixture_name_prefix = fixture_name_prefix
       @new_models = new_models
-      @deleted_models = []
+      @deleted_models = {}
       @initial_now = Time.zone.now
       @named_new_fixtures = {}
+      @existing_fixtures_cache = {}
     end
 
     def self.resume_recording_session
@@ -77,7 +78,11 @@ module FixtureFarm
             @new_models << model_instance
           end
         elsif payload[:name] =~ /([:\w]+) Destroy/
-          @deleted_models.push(*payload[:connection].transaction_manager.current_transaction.records)
+          payload[:connection].transaction_manager.current_transaction.records.each do |model|
+            fixture_name = existing_fixture_name(model)
+
+            @deleted_models[fixture_name] = model if fixture_name
+          end
         end
       end
 
@@ -286,10 +291,8 @@ module FixtureFarm
     end
 
     def delete_fixtures_for_deleted_models
-      @deleted_models.uniq.each do |deleted_model|
-        fixture_name = deleted_model.fixture_name
-        next unless fixture_name
-
+      # TODO: optimize
+      @deleted_models.each do |fixture_name, deleted_model|
         fixtures_file_path = deleted_model.fixtures_file_path
 
         fixtures = YAML.load_file(fixtures_file_path, permitted_classes: [ActiveSupport::HashWithIndifferentAccess]) || {}
@@ -308,7 +311,6 @@ module FixtureFarm
     end
 
     def existing_fixtures_for_model(model_instance)
-      @existing_fixtures_cache ||= {}
       model_class = model_instance.class
 
       return @existing_fixtures_cache[model_class] if @existing_fixtures_cache.key?(model_class)
@@ -334,7 +336,7 @@ module FixtureFarm
           "#{model_instance.class.name.underscore.split('/').last}_1"
         ].select(&:present?).join('_')
 
-        while @named_new_fixtures[new_fixture_name] || existing_fixtures[new_fixture_name]
+        while @named_new_fixtures[new_fixture_name] || existing_fixtures[new_fixture_name] && !@deleted_models[new_fixture_name]
           new_fixture_name = new_fixture_name.sub(/_(\d+)$/, "_#{Regexp.last_match(1).to_i + 1}")
         end
 
@@ -344,10 +346,18 @@ module FixtureFarm
       end
     end
 
+    def existing_fixture_name(model_instance)
+      existing_fixtures = existing_fixtures_for_model(model_instance)
+
+      existing_fixtures.keys.find do |key|
+        ActiveRecord::FixtureSet.identify(key) == model_instance.id
+      end
+    end
+
     def fixture_name(model_instance)
       @named_new_fixtures.find do |_, fixture_model|
         fixture_model.id == model_instance.id
-      end&.first || model_instance.fixture_name
+      end&.first || existing_fixture_name(model_instance)
     end
   end
 end
