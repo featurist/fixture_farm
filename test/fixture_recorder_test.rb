@@ -351,4 +351,29 @@ class FixtureRecorderTest < ActiveSupport::TestCase
     assert fixtures.key?('user_3'), 'Should reuse deleted fixture name user_3'
     refute fixtures.key?('user_4'), 'Should not generate user_4 when user_3 is available'
   end
+
+  test 'skips existing fixture names when creating new fixtures' do
+    # Verify user_3 fixture exists initially
+    initial_fixtures = YAML.load_file(Rails.root.join('test', 'fixtures', 'users.yml'))
+    assert initial_fixtures.key?('user_3')
+
+    recorder = FixtureFarm::FixtureRecorder.new(nil)
+
+    recorder.record_new_fixtures do
+      # Don't delete anything, just create three new users
+      User.create!(name: 'New User 1', email: 'new1@example.com')
+      User.create!(name: 'New User 2', email: 'new2@example.com')
+      User.create!(name: 'New User 3', email: 'new3@example.com')
+    end
+
+    fixtures = YAML.load_file(Rails.root.join('test', 'fixtures', 'users.yml'))
+
+    # Should generate user_1, user_2, user_4 (skipping existing user_3)
+    assert fixtures.key?('user_1')
+    assert fixtures.key?('user_2')
+    assert fixtures.key?('user_3'), 'Original user_3 should still exist'
+    assert fixtures.key?('user_4'), 'Should skip existing user_3 and generate user_4'
+    assert_equal 'Third User', fixtures['user_3']['name'], 'Original user_3 should be unchanged'
+    assert_equal 'New User 3', fixtures['user_4']['name'], 'user_4 should contain New User 3'
+  end
 end
