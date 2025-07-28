@@ -1,10 +1,19 @@
 # frozen_string_literal: true
 
 module FixtureFarm
+
   mattr_accessor :low_priority_parent_model_for_naming
 
   class FixtureRecorder
-    STORE_PATH = Rails.root.join('tmp', 'fixture_farm_store.json')
+    attr_accessor :new_blob_file_paths
+
+    def self.store_path
+      Rails.root.join('tmp', 'fixture_farm_store.json')
+    end
+
+    def store_path
+      self.class.store_path
+    end
 
     def initialize(fixture_name_prefix, new_models = [])
       @fixture_name_prefix = fixture_name_prefix
@@ -28,19 +37,19 @@ module FixtureFarm
     rescue ActiveRecord::RecordNotFound
       # External interference with database (e.g. fixtures:load)
       recording_session['error'] = 'database was externally modified/reset'
-      File.write(STORE_PATH, recording_session.to_json)
+      File.write(store_path, recording_session.to_json)
       nil
     end
 
     def self.start_recording_session!(fixture_name_prefix)
-      File.write(STORE_PATH, {
+      File.write(store_path, {
         fixture_name_prefix: fixture_name_prefix,
         new_models: []
       }.to_json)
     end
 
     def self.stop_recording_session!
-      FileUtils.rm_f(STORE_PATH)
+      FileUtils.rm_f(store_path)
     end
 
     def self.recording_session_in_progress?
@@ -51,9 +60,9 @@ module FixtureFarm
     end
 
     def self.load_recording_session
-      return nil unless File.exist?(STORE_PATH)
+      return nil unless File.exist?(store_path)
 
-      JSON.load_file(STORE_PATH, permitted_classes: [ActiveSupport::HashWithIndifferentAccess])
+      JSON.load_file(store_path, permitted_classes: [ActiveSupport::HashWithIndifferentAccess])
     end
 
     def self.last_session_error
@@ -97,6 +106,7 @@ module FixtureFarm
       ActiveSupport::Notifications.unsubscribe(@subscriber)
       @stopped = true
       reload_new_models
+      rename_active_storage_blobs_for_idempotency
       delete_fixtures_for_deleted_models
       update_fixture_files(named_new_fixtures)
     end
@@ -104,7 +114,7 @@ module FixtureFarm
     def update_recording_session
       return unless FixtureRecorder.recording_session_in_progress?
 
-      File.write(STORE_PATH, {
+      File.write(store_path, {
         fixture_name_prefix: @fixture_name_prefix,
         new_models: @new_models.map { |model| [model.class.name, model.id] }
       }.to_json)
@@ -119,6 +129,31 @@ module FixtureFarm
     end
 
     private
+
+    def rename_active_storage_blobs_for_idempotency
+      self.new_blob_file_paths = named_new_fixtures.filter_map do |fixture_name, model|
+        next unless model.is_a?(ActiveStorage::Blob)
+
+        rename_blob_file_for_idempotency(fixture_name, model)
+      end
+    end
+
+    def rename_blob_file_for_idempotency(fixture_name, blob)
+      old_key = blob.key
+      new_key = fixture_name
+
+      blob.update!(key: new_key)
+
+      from_path = Rails.root.join('storage', old_key[0..1], old_key[2..3], old_key)
+      to_dir = Rails.root.join('storage', new_key[0..1], new_key[2..3])
+      to_path = to_dir.join(new_key)
+
+      `mkdir -p #{to_dir}`
+
+      `mv #{from_path} #{to_path}`
+
+      to_path
+    end
 
     def reload_new_models
       @new_models = @new_models.map do |model_instance|

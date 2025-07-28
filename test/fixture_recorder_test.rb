@@ -42,7 +42,7 @@ class FixtureRecorderTest < ActiveSupport::TestCase
 
   test 'resume_recording_session loads existing session' do
     user = User.create!(name: 'Test User', email: 'test@example.com')
-    File.write(FixtureFarm::FixtureRecorder::STORE_PATH, {
+    File.write(FixtureFarm::FixtureRecorder.store_path, {
       fixture_name_prefix: 'some_prefix',
       new_models: [['User', user.id]]
     }.to_json)
@@ -229,7 +229,7 @@ class FixtureRecorderTest < ActiveSupport::TestCase
 
   test 'recording_session_in_progress? returns false when session has error field' do
     # Create session file with error
-    File.write(FixtureFarm::FixtureRecorder::STORE_PATH, {
+    File.write(FixtureFarm::FixtureRecorder.store_path, {
       fixture_name_prefix: 'test_prefix',
       new_models: [],
       error: 'database was externally modified/reset'
@@ -239,7 +239,7 @@ class FixtureRecorderTest < ActiveSupport::TestCase
   end
 
   test 'recording_session_in_progress? returns true when session exists without error field' do
-    File.write(FixtureFarm::FixtureRecorder::STORE_PATH, {
+    File.write(FixtureFarm::FixtureRecorder.store_path, {
       fixture_name_prefix: 'test_prefix',
       new_models: []
     }.to_json)
@@ -249,7 +249,7 @@ class FixtureRecorderTest < ActiveSupport::TestCase
 
   test 'resume_recording_session handles missing records by adding error to session' do
     # Create session file with non-existent model ID
-    File.write(FixtureFarm::FixtureRecorder::STORE_PATH, {
+    File.write(FixtureFarm::FixtureRecorder.store_path, {
       fixture_name_prefix: 'test_prefix',
       new_models: [['User', 99_999]] # Non-existent ID
     }.to_json)
@@ -259,7 +259,7 @@ class FixtureRecorderTest < ActiveSupport::TestCase
     assert_nil recorder
 
     # Check that session now contains error
-    session_data = JSON.parse(File.read(FixtureFarm::FixtureRecorder::STORE_PATH))
+    session_data = JSON.parse(File.read(FixtureFarm::FixtureRecorder.store_path))
     assert session_data['error']
     assert_equal 'database was externally modified/reset', session_data['error']
 
@@ -375,5 +375,51 @@ class FixtureRecorderTest < ActiveSupport::TestCase
     assert fixtures.key?('user_4'), 'Should skip existing user_3 and generate user_4'
     assert_equal 'Third User', fixtures['user_3']['name'], 'Original user_3 should be unchanged'
     assert_equal 'New User 3', fixtures['user_4']['name'], 'user_4 should contain New User 3'
+  end
+
+  test 'renames active storage blobs with fixture names' do
+    recorder = FixtureFarm::FixtureRecorder.new(nil)
+    user = users(:existing_user)
+
+    recorder.record_new_fixtures do
+      user.avatar.attach(
+        io: StringIO.new('test file content'),
+        filename: 'test.txt',
+        content_type: 'text/plain'
+      )
+    end
+
+    blob = user.avatar.blob
+    assert_equal 'blob_1', blob.key
+
+    # Verify blob fixture was created
+    blob_fixtures = YAML.load_file(Rails.root.join('test', 'fixtures', 'active_storage', 'blobs.yml'))
+    assert blob_fixtures.key?('blob_1')
+
+    # Verify file was moved to correct location
+    expected_path = Rails.root.join('storage', 'bl', 'ob', 'blob_1')
+    assert File.exist?(expected_path)
+  end
+
+  test 'populates new_blob_file_paths attribute when blobs are renamed' do
+    recorder = FixtureFarm::FixtureRecorder.new(nil)
+    user = users(:existing_user)
+
+    recorder.record_new_fixtures do
+      user.avatar.attach(
+        io: StringIO.new('test file content'),
+        filename: 'test.txt',
+        content_type: 'text/plain'
+      )
+    end
+
+    # Verify new_blob_file_paths is populated
+    assert_predicate recorder.new_blob_file_paths, :present?
+
+    assert_equal 1, recorder.new_blob_file_paths.length
+
+    file_path = recorder.new_blob_file_paths.first
+    expected_path = Rails.root.join('storage', 'bl', 'ob', 'blob_1')
+    assert_equal expected_path, file_path
   end
 end

@@ -7,6 +7,8 @@ class User < ApplicationRecord
   has_many :groups, through: :memberships
   has_many :notifications, as: :notifiable, dependent: :destroy
 
+  has_one_attached :avatar
+
   validates :name, presence: true
   validates :email, presence: true, uniqueness: true
 

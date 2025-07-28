@@ -10,9 +10,3 @@ group :development do
   gem 'rubocop'
   gem 'sqlite3'
 end
-
-require 'pp'
-
-group :test do
-  gem 'fakefs', '~> 3.0', require: 'fakefs/safe'
-end

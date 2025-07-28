@@ -4,7 +4,6 @@
 ENV['RAILS_ENV'] = 'test'
 
 require_relative '../test/dummy/config/environment'
-require_relative '../lib/fixture_farm/fixture_recorder'
 
 require 'rails/test_help'
 
@@ -20,36 +19,39 @@ load Rails.root.join('db', 'schema.rb')
 
 module ActiveSupport
   class TestCase
+    concerning :DummyAppIsolation do
+      included do
+        cattr_accessor :tmp_dir
+      end
+
+      def setup_dummy_app
+        tmp_dir = Dir.mktmpdir
+        dummy_app_path = File.expand_path('./dummy', __dir__)
+        FileUtils.cp_r("#{dummy_app_path}/.", tmp_dir)
+
+        Rails.define_singleton_method(:root) { Pathname.new(tmp_dir) }
+
+        ActiveStorage::Blob.service.root = Rails.root.join('storage')
+
+        Rails.application.reload_routes!
+      end
+
+      def teardown_dummy_app
+        FileUtils.remove_entry(self.class.tmp_dir) if self.class.tmp_dir
+      end
+    end
+
     self.use_transactional_tests = true
 
     fixtures :all
 
     setup do
-      FakeFS.activate!
-      FakeFS::FileSystem.clone(Rails.root)
-
-      # Clone locale files so I18n works (model validation errors)
-      %w[active_model active_record action_view active_support].each do |gem_name|
-        locale_path = File.join(Gem.loaded_specs[gem_name.sub('_', '')].full_gem_path, 'lib', gem_name, 'locale')
-        FakeFS::FileSystem.clone(locale_path)
-      end
-
-      rails_templates_path = File.join(
-        Gem.loaded_specs['actionpack'].full_gem_path,
-        'lib',
-        'action_dispatch',
-        'middleware',
-        'templates'
-      )
-      FakeFS::FileSystem.clone(rails_templates_path)
-
-      action_cable_path = File.join(Gem.loaded_specs['actioncable'].full_gem_path, 'lib', 'action_cable')
-      FakeFS::FileSystem.clone(action_cable_path)
+      setup_dummy_app
     end
 
     teardown do
       FixtureFarm::FixtureRecorder.stop_recording_session!
-      FakeFS.deactivate!
+      teardown_dummy_app
     end
   end
 end

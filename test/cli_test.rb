@@ -4,10 +4,6 @@ require 'English'
 require 'test_helper'
 
 class CLITest < ActiveSupport::TestCase
-  def setup
-    FakeFS.deactivate!
-  end
-
   test 'CLI shows usage when no arguments provided' do
     result = run_cli([])
     assert_match(/Usage: bundle exec fixture_farm/, result[:output])
@@ -34,7 +30,7 @@ class CLITest < ActiveSupport::TestCase
     assert FixtureFarm::FixtureRecorder.recording_session_in_progress?
 
     # Verify the prefix is stored
-    data = JSON.parse(File.read(FixtureFarm::FixtureRecorder::STORE_PATH))
+    data = JSON.parse(File.read(FixtureFarm::FixtureRecorder.store_path))
     assert_equal 'my_prefix', data['fixture_name_prefix']
   end
 
@@ -70,7 +66,7 @@ class CLITest < ActiveSupport::TestCase
     assert_equal 0, result[:exit_code]
 
     # Verify new prefix overwrites old one
-    data = JSON.parse(File.read(FixtureFarm::FixtureRecorder::STORE_PATH))
+    data = JSON.parse(File.read(FixtureFarm::FixtureRecorder.store_path))
     assert_equal 'new_prefix', data['fixture_name_prefix']
   end
 
@@ -83,7 +79,7 @@ class CLITest < ActiveSupport::TestCase
 
   test 'CLI status command shows error when session has error field' do
     # Create session file with error
-    File.write(FixtureFarm::FixtureRecorder::STORE_PATH, {
+    File.write(FixtureFarm::FixtureRecorder.store_path, {
       fixture_name_prefix: 'test_prefix',
       new_models: [],
       error: 'database was externally modified/reset'
@@ -97,7 +93,7 @@ class CLITest < ActiveSupport::TestCase
   private
 
   def run_cli(args)
-    command = "cd #{Rails.root} && bundle exec ../../bin/fixture_farm #{args.join(' ')}"
+    command = "cd #{Rails.root} && bundle exec #{File.expand_path('../bin/fixture_farm', __dir__)} #{args.join(' ')}"
     output = `#{command} 2>&1`
     exit_code = $CHILD_STATUS.exitstatus
     { output: output, exit_code: exit_code }

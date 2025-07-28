@@ -68,10 +68,33 @@ ActiveRecord::Schema.define(version: 20_210_101_000_001) do
     t.index ['tenant_model_id'], name: 'index_tenant_posts_on_tenant_model_id'
   end
 
+  create_table 'active_storage_blobs', force: :cascade do |t|
+    t.string 'key', null: false
+    t.string 'filename', null: false
+    t.string 'content_type'
+    t.text 'metadata'
+    t.string 'service_name', null: false
+    t.bigint 'byte_size', null: false
+    t.string 'checksum'
+    t.datetime 'created_at', null: false
+    t.index ['key'], name: 'index_active_storage_blobs_on_key', unique: true
+  end
+
+  create_table 'active_storage_attachments', force: :cascade do |t|
+    t.string 'name', null: false
+    t.string 'record_type', null: false
+    t.bigint 'record_id', null: false
+    t.bigint 'blob_id', null: false
+    t.datetime 'created_at', null: false
+    t.index ['record_type', 'record_id', 'name', 'blob_id'], name: 'index_active_storage_attachments_uniqueness', unique: true
+    t.index ['blob_id'], name: 'index_active_storage_attachments_on_blob_id'
+  end
+
   add_foreign_key 'posts', 'users'
   add_foreign_key 'comments', 'users'
   add_foreign_key 'comments', 'posts'
   add_foreign_key 'memberships', 'users'
   add_foreign_key 'memberships', 'groups'
   add_foreign_key 'tenant_posts', 'tenant_models'
+  add_foreign_key 'active_storage_attachments', 'active_storage_blobs', column: 'blob_id'
 end
