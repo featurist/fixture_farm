@@ -1,16 +1,19 @@
 # FixtureFarm
 
 This gem lets you do two things:
-
+- record fixtures for a block of code (e.g. part of a test).
 - record fixtures as you browse.
-- record fixtures for a block of code (e.g. setup part of a test).
 
-Generated fixture that `belongs_to` a record from an existing fixture, will reference that fixture by name.
+A few things to note:
+- generated fixture names are based on their `belongs_to` fixture names.
+- generated fixture that `belongs_to` a record from an existing fixture, will reference that fixture by name.
+- models, destroyed during recording, will be removed from fixtures (if they were originally there).
+- generated `ActiveStorage::Blob` fixtures file names, will be the same as fixture names (so they can be generated multiple times, without generating new file each time).
 
 ### Limitations
 
 - doesn't update fixtures
-- assumes that all serialized attributes are json (so that at least ActiveStorage::Blob metadata is correctly represented; it really should be Rails serializing attributes according to their respective coders when inserting fixtures into the database, but, alas, this isn't happening)
+- assumes that all serialized attributes are json (so that at least ActiveStorage::Blob metadata is correctly represented; it really should be Rails serializing attributes according to their respective coders when inserting fixtures into the database, but, alas, this isn't how it works)
 
 ## Installation
 
