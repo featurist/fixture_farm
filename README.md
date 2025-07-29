@@ -9,6 +9,7 @@ A few things to note:
 - generated fixture that `belongs_to` a record from an existing fixture, will reference that fixture by name.
 - models, destroyed during recording, will be removed from fixtures (if they were originally there).
 - generated `ActiveStorage::Blob` fixtures file names, will be the same as fixture names (so they can be generated multiple times, without generating new file each time).
+- AR models gain `#fixture_name` method
 
 ### Limitations
 
@@ -67,67 +68,25 @@ To record in tests, wrap some code in `record_new_fixtures` block. For example:
 
 include FixtureFarm::TestHelper
 
-test 'some stuff does the right thing' do
-  record_new_fixtures do |recorder|
-    user = User.create!(name: 'Bob')
-    post = user.posts.create!(title: 'Stuff')
+test 'parents fixtures have children' do
+  offending_records = Parent.where.missing(:children)
 
-    recorder.stop!
-
-    assert_difference 'user.published_posts.size' do
-      post.publish!
-    end
-  end
-end
-```
-
-Running this test generates user and post fixtures. Now you can rewrite this test to use them:
-
-```ruby
-test 'some stuff does the right thing' do
-  user = users('user_1')
-
-  assert_difference 'user.published_posts.size' do
-    user.posts.first.publish!
-  end
-end
-```
-
-`record_new_fixtures` accepts optional name prefix, that applies to all new fixture names.
-
-A more robust approach is to have dedicated fixture tests that normally fail, but can be optionally run in "record mode" (think VCR).
-
-For example, let's say we have `Author` model that `has_many :posts` and we require authors to have at least one post. Here's the test to enforce `authors` fixtures to comply with this rule:
-
-```ruby
-test 'authors fixtures must have at least one post' do
-  offending_records = Author.where.missing(:posts)
-
-  assert_empty offending_records
-end
-```
-
-Let's say this test is currently failing.
-
-Now let's add the option to automatically record missing fixtures:
-
-```ruby
-test 'authors fixtures must have at least one post' do
-  offending_records = Author.where.missing(:posts)
-
-  if ENV['RECORD_FIXTURES']
+  if ENV['GENERATE_FIXTURES']
     record_new_fixtures do
-      offending_records.each do |author|
-        author.posts.create!(text: 'some text')
+      offending_records.each do |parent|
+        parent.children.create!(name: 'Bob')
       end
     end
+  else
+     assert_empty offending_records.map(&:fixture_name),
+                  "The following parents don't have children:"
   end
-
-  assert_empty offending_records
 end
 ```
 
-Running this test with `RECORD_FIXTURES=1` will generate missing fixture entries in `test/fixtures/posts.yml`. Now re-run the test again and it's passing.
+Assuming there was a parent fixture `dave` that didn't have any children, this test will fail. Now, running the same test with `GENERATE_FIXTURES=1` will generate one child fixture named `dave_child_1`. The test is now passing.
+
+`record_new_fixtures` accepts optional name prefix, that applies to all new fixture names.
 
 ### Automatic fixture naming
 
@@ -137,6 +96,51 @@ It's possible to lower the priority of given parent assiciations when it comes t
 
 ```ruby
 FixtureFarm.low_priority_parent_model_for_naming = -> { _1.is_a?(TenantModel) }
+```
+
+### Attachment fixtures
+
+Rather than [manually crafting attachment fixtures](https://guides.rubyonrails.org/v8.0/active_storage_overview.html#adding-attachments-to-fixtures), we can get the gem do the leg work. Not only is this less boring, but it's also going to generate variant fixtures.
+
+I'd also go as far as suggesting that attachment files for generated blobs should be checked into git just as the fixtures themselves are. To share them with the development environment (e.g. `rails db:fixtures:load`), let's store test attachment files in the same `./storage` directory used in development:
+
+```ruby
+# config/environments/test.rb
+config.active_storage.service = :local
+```
+
+Now this test will not only generate attachments and variant fixtures, but also `git add` new attachment files. The old removed ones will show up in `git status`.
+
+```ruby
+test "product fixtures have images" do
+  offending_records = Product.where.missing(:images_attachments)
+
+  if ENV["GENERATE_FIXTURES"]
+    # Makes generation idempotent
+    `git restore --staged storage`
+
+    record_new_fixtures do |recorder|
+      ActiveStorage::Attachment.where(record_type: 'Product').destroy_all
+
+      Product.find_each do |product|
+        product.images.attach(
+          io: File.open(file_fixture("products/#{product.fixture_name}.jpg")),
+          filename: "#{product.fixture_name}.jpg",
+          content_type: "image/jpeg"
+        )
+        # This generates variants
+        perform_enqueued_jobs
+      end
+
+      recorder.stop!
+
+      `git add -f #{recorder.new_blob_file_paths.join(' ')}`
+    end
+  else
+    assert_empty offending_records.map(&:fixture_name),
+      "Expected the following product fixtures to have images:"
+  end
+end
 ```
 
 ## License
