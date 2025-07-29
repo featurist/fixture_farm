@@ -120,7 +120,6 @@ test "product fixtures have images" do
     `git restore --staged storage` # clears previously added files
     `git restore storage`          # restores previously deleted files
 
-
     record_fixtures do |recorder|
       ActiveStorage::Attachment.where(record_type: 'Product').destroy_all
 
