@@ -8,7 +8,7 @@ module FixtureFarm
     include Hook
 
     included do
-      around_perform :record_new_fixtures, if: :record_new_fixtures?
+      around_perform :record_fixtures, if: :record_fixtures?
     end
   end
 end

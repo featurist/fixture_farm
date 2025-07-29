@@ -72,7 +72,7 @@ module FixtureFarm
       recording_session['error']
     end
 
-    def record_new_fixtures
+    def record_fixtures
       @stopped = false
 
       @subscriber = ActiveSupport::Notifications.subscribe 'sql.active_record' do |event|

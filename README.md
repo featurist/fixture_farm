@@ -62,7 +62,7 @@ bundle exec fixture_farm stop
 
 ### Record in tests
 
-To record in tests, wrap some code in `record_new_fixtures` block. For example:
+To record in tests, wrap some code in `record_fixtures` block. For example:
 
 ```ruby
 
@@ -72,7 +72,7 @@ test 'parents fixtures have children' do
   offending_records = Parent.where.missing(:children)
 
   if ENV['GENERATE_FIXTURES']
-    record_new_fixtures do
+    record_fixtures do
       offending_records.each do |parent|
         parent.children.create!(name: 'Bob')
       end
@@ -86,7 +86,7 @@ end
 
 Assuming there was a parent fixture `dave` that didn't have any children, this test will fail. Now, running the same test with `GENERATE_FIXTURES=1` will generate one child fixture named `dave_child_1`. The test is now passing.
 
-`record_new_fixtures` accepts optional name prefix, that applies to all new fixture names.
+`record_fixtures` accepts optional name prefix, that applies to all new fixture names.
 
 ### Automatic fixture naming
 
@@ -119,7 +119,7 @@ test "product fixtures have images" do
     # Makes generation idempotent
     `git restore --staged storage`
 
-    record_new_fixtures do |recorder|
+    record_fixtures do |recorder|
       ActiveStorage::Attachment.where(record_type: 'Product').destroy_all
 
       Product.find_each do |product|

@@ -6,7 +6,7 @@ class FixtureRecorderTest < ActiveSupport::TestCase
   test 'generates correct fixture names with prefix' do
     recorder = FixtureFarm::FixtureRecorder.new('my_prefix')
 
-    recorder.record_new_fixtures do
+    recorder.record_fixtures do
       User.create!(name: 'Test User', email: 'test@example.com')
     end
 
@@ -19,7 +19,7 @@ class FixtureRecorderTest < ActiveSupport::TestCase
 
   test 'generates correct fixture names without prefix' do
     recorder = FixtureFarm::FixtureRecorder.new(nil)
-    recorder.record_new_fixtures do
+    recorder.record_fixtures do
       User.create!(name: 'Test User', email: 'test@example.com')
     end
 
@@ -49,7 +49,7 @@ class FixtureRecorderTest < ActiveSupport::TestCase
 
     recorder = FixtureFarm::FixtureRecorder.resume_recording_session
 
-    recorder.record_new_fixtures {}
+    recorder.record_fixtures {}
 
     fixtures = YAML.load_file(Rails.root.join('test', 'fixtures', 'users.yml'))
 
@@ -58,10 +58,10 @@ class FixtureRecorderTest < ActiveSupport::TestCase
     assert_equal 'Test User', fixtures['some_prefix_user_1']['name']
   end
 
-  test 'record_new_fixtures allows early stopping' do
+  test 'record_fixtures allows early stopping' do
     recorder = FixtureFarm::FixtureRecorder.new(nil)
 
-    recorder.record_new_fixtures do |recorder|
+    recorder.record_fixtures do |recorder|
       User.create!(name: 'Test User', email: 'test@example.com')
       recorder.stop!
       User.create!(name: 'Test User 2', email: 'test2@example.com')
@@ -76,21 +76,21 @@ class FixtureRecorderTest < ActiveSupport::TestCase
     refute fixtures.key?('user_2') # Second user should not be recorded
   end
 
-  test 'record_new_fixtures creates fixture files' do
+  test 'record_fixtures creates fixture files' do
     user_fixtures_file = Rails.root.join('test', 'fixtures', 'users.yml')
     FileUtils.rm(user_fixtures_file)
 
-    FixtureFarm::FixtureRecorder.new(nil).record_new_fixtures do
+    FixtureFarm::FixtureRecorder.new(nil).record_fixtures do
       User.create!(name: 'Test User', email: 'test@example.com')
     end
 
     assert File.exist?(user_fixtures_file)
   end
 
-  test 'record_new_fixtures handles associations properly' do
+  test 'record_fixtures handles associations properly' do
     recorder = FixtureFarm::FixtureRecorder.new('test')
 
-    recorder.record_new_fixtures do
+    recorder.record_fixtures do
       user = User.create!(name: 'Test User', email: 'test@example.com')
       user.posts.create!(title: 'Test Post', content: 'Test content')
     end
@@ -103,10 +103,10 @@ class FixtureRecorderTest < ActiveSupport::TestCase
     assert_equal 'test_user_1', post_fixtures['test_user_1_post_1']['user']
   end
 
-  test 'record_new_fixtures handles polymorphic associations' do
+  test 'record_fixtures handles polymorphic associations' do
     recorder = FixtureFarm::FixtureRecorder.new('poly')
 
-    recorder.record_new_fixtures do
+    recorder.record_fixtures do
       user = User.create!(name: 'Test User', email: 'test@example.com')
       Notification.create!(message: 'Test notification', notifiable: user)
     end
@@ -119,8 +119,8 @@ class FixtureRecorderTest < ActiveSupport::TestCase
     assert_equal 'poly_user_1', notification_fixtures['poly_user_1_notification_1']['notifiable']
   end
 
-  test 'record_new_fixtures handles duplicate names' do
-    FixtureFarm::FixtureRecorder.new(nil).record_new_fixtures do
+  test 'record_fixtures handles duplicate names' do
+    FixtureFarm::FixtureRecorder.new(nil).record_fixtures do
       User.create!(name: 'Test User 1', email: 'test1@example.com')
       User.create!(name: 'Test User 2', email: 'test2@example.com')
     end
@@ -135,7 +135,7 @@ class FixtureRecorderTest < ActiveSupport::TestCase
     recorder = FixtureFarm::FixtureRecorder.new('delete_test')
 
     user_to_delete = nil
-    recorder.record_new_fixtures do |recorder|
+    recorder.record_fixtures do |recorder|
       user_to_delete = User.create!(name: 'User to Delete', email: 'delete@example.com')
       User.create!(name: 'User to Keep', email: 'keep@example.com')
 
@@ -160,7 +160,7 @@ class FixtureRecorderTest < ActiveSupport::TestCase
 
     recorder = FixtureFarm::FixtureRecorder.new('priority_test')
 
-    recorder.record_new_fixtures do
+    recorder.record_fixtures do
       tenant = TenantModel.create!(name: 'Test Tenant')
       User.create!(name: 'Test User', email: 'test@example.com')
 
@@ -216,7 +216,7 @@ class FixtureRecorderTest < ActiveSupport::TestCase
   test 'handles STI models correctly' do
     recorder = FixtureFarm::FixtureRecorder.new('sti_test')
 
-    recorder.record_new_fixtures do
+    recorder.record_fixtures do
       InheritedModel.create!(name: 'Test Inherited', email: 'inherited@example.com', special_field: 'Special Value')
     end
 
@@ -270,7 +270,7 @@ class FixtureRecorderTest < ActiveSupport::TestCase
   test 'deletes specific fixture when model is destroyed but keeps others' do
     recorder = FixtureFarm::FixtureRecorder.new('delete_test')
 
-    recorder.record_new_fixtures do
+    recorder.record_fixtures do
       user = users(:existing_user)
       user.destroy!
     end
@@ -292,7 +292,7 @@ class FixtureRecorderTest < ActiveSupport::TestCase
 
     recorder = FixtureFarm::FixtureRecorder.new('clear_all_test')
 
-    recorder.record_new_fixtures do
+    recorder.record_fixtures do
       # Delete all existing posts
       Post.destroy_all
     end
@@ -309,7 +309,7 @@ class FixtureRecorderTest < ActiveSupport::TestCase
 
     recorder = FixtureFarm::FixtureRecorder.new('group_delete_test')
 
-    recorder.record_new_fixtures do
+    recorder.record_fixtures do
       group = groups(:admins)
       group.destroy!
     end
@@ -331,7 +331,7 @@ class FixtureRecorderTest < ActiveSupport::TestCase
 
     recorder = FixtureFarm::FixtureRecorder.new(nil)
 
-    recorder.record_new_fixtures do
+    recorder.record_fixtures do
       # Delete the user_3 fixture
       user = users(:user_3)
       user.destroy!
@@ -359,7 +359,7 @@ class FixtureRecorderTest < ActiveSupport::TestCase
 
     recorder = FixtureFarm::FixtureRecorder.new(nil)
 
-    recorder.record_new_fixtures do
+    recorder.record_fixtures do
       # Don't delete anything, just create three new users
       User.create!(name: 'New User 1', email: 'new1@example.com')
       User.create!(name: 'New User 2', email: 'new2@example.com')
@@ -381,7 +381,7 @@ class FixtureRecorderTest < ActiveSupport::TestCase
     recorder = FixtureFarm::FixtureRecorder.new(nil)
     user = users(:existing_user)
 
-    recorder.record_new_fixtures do
+    recorder.record_fixtures do
       user.avatar.attach(
         io: StringIO.new('test file content'),
         filename: 'test.txt',
@@ -405,7 +405,7 @@ class FixtureRecorderTest < ActiveSupport::TestCase
     recorder = FixtureFarm::FixtureRecorder.new(nil)
     user = users(:existing_user)
 
-    recorder.record_new_fixtures do
+    recorder.record_fixtures do
       user.avatar.attach(
         io: StringIO.new('test file content'),
         filename: 'test.txt',

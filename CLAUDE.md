@@ -61,7 +61,7 @@ bundle exec fixture_farm stop
 - **Hook** (`lib/fixture_farm/hook.rb`): Base module for recording functionality
 - **ControllerHook** (`lib/fixture_farm/controller_hook.rb`): Enables recording during HTTP requests
 - **ActiveJobHook** (`lib/fixture_farm/active_job_hook.rb`): Enables recording during job execution
-- **TestHelper** (`lib/fixture_farm/test_helper.rb`): Provides `record_new_fixtures` method for tests
+- **TestHelper** (`lib/fixture_farm/test_helper.rb`): Provides `record_fixtures` method for tests
 
 ### Key Design Patterns
 
@@ -88,11 +88,11 @@ FixtureFarm.low_priority_parent_model_for_naming = ->(model) { model.is_a?(Tenan
 - Uses Rails.root for file paths and Rails notifications for model tracking
 
 ### Test Integration
-Include `FixtureFarm::TestHelper` in your test classes to use `record_new_fixtures`:
+Include `FixtureFarm::TestHelper` in your test classes to use `record_fixtures`:
 
 ```ruby
 test 'example' do
-  record_new_fixtures('prefix') do |recorder|
+  record_fixtures('prefix') do |recorder|
     # Create models here
     recorder.stop! # Optional early stop
   end
