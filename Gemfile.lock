@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    fixture_farm (1.0.0)
+    fixture_farm (1.0.1)
       rails (>= 6.2)
 
 GEM
