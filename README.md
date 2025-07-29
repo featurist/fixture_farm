@@ -78,8 +78,8 @@ test 'parents fixtures have children' do
       end
     end
   else
-     assert_empty offending_records.map(&:fixture_name),
-                  "The following parents don't have children:"
+    assert_empty offending_records.map(&:fixture_name),
+      "The following parents don't have children:"
   end
 end
 ```
