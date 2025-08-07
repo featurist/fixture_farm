@@ -55,7 +55,12 @@ include FixtureFarm::ActiveJobHook if defined?(FixtureFarm)
 Then start/stop recording using tasks:
 
 ```bash
-bundle exec fixture_farm record some_awesome_name_prefix
+bundle exec fixture_farm record
+# OR
+bundle exec fixture_farm record name_prefix
+# OR
+bundle exec fixture_farm record name_prefix:replaces_name
+
 bundle exec fixture_farm status
 bundle exec fixture_farm stop
 ```
@@ -87,6 +92,25 @@ end
 Assuming there was a parent fixture `dave` that didn't have any children, this test will fail. Now, running the same test with `GENERATE_FIXTURES=1` will generate one child fixture named `dave_child_1`. The test is now passing.
 
 `record_fixtures` accepts optional name prefix, that applies to all new fixture names.
+
+#### Fixture Name Replacement
+
+`record_fixtures` also supports hash arguments for advanced fixture naming control:
+
+```ruby
+# Replace 'client_1' with 'new_client' in fixture names, or use 'new_client' as prefix if not found
+record_fixtures(new_client: :client_1) do
+  User.create!(name: 'Test User', email: 'test@example.com')
+end
+```
+
+This works in two ways:
+- **Replacement**: If a generated fixture name contains `client_1`, it gets replaced with `new_client`
+- **Prefixing**: If a generated fixture name doesn't contain `client_1`, it gets prefixed with `new_client_`
+
+For example:
+- A user fixture that would be named `client_1_user_1` becomes `new_client_user_1` (replacement)
+- A user fixture that would be named `user_1` becomes `new_client_user_1` (prefixing)
 
 ### Automatic fixture naming
 

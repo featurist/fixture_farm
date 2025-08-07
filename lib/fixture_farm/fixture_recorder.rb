@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 module FixtureFarm
-
   mattr_accessor :low_priority_parent_model_for_naming
 
   class FixtureRecorder
@@ -16,7 +15,13 @@ module FixtureFarm
     end
 
     def initialize(fixture_name_prefix, new_models = [])
-      @fixture_name_prefix = fixture_name_prefix
+      if fixture_name_prefix.is_a?(Hash)
+        @fixture_name_replacements = fixture_name_prefix
+        @fixture_name_prefix = nil
+      else
+        @fixture_name_prefix = fixture_name_prefix
+        @fixture_name_replacements = {}
+      end
       @new_models = new_models
       @deleted_models = {}
       @initial_now = Time.zone.now
@@ -368,12 +373,25 @@ module FixtureFarm
       fixture_name(model_instance) || begin
         existing_fixtures = existing_fixtures_for_model(model_instance)
 
-        new_fixture_name = [
+        base_name = [
           first_belongs_to_fixture_name(model_instance).presence || @fixture_name_prefix,
           "#{model_instance.class.name.underscore.split('/').last}_1"
         ].select(&:present?).join('_')
 
-        while @named_new_fixtures[new_fixture_name] || existing_fixtures[new_fixture_name] && !@deleted_models[new_fixture_name]
+        @fixture_name_replacements.each do |new_name, old_name|
+          # Only apply replacement if the base_name doesn't already start with new_name
+          # This prevents double-application of replacements
+          next if base_name.start_with?("#{new_name}_")
+
+          original_name = base_name
+          base_name = base_name.gsub(/\b#{Regexp.escape(old_name.to_s)}\b/, new_name.to_s)
+
+          # If no replacement occurred, use new_name as prefix
+          base_name = "#{new_name}_#{base_name}" if base_name == original_name
+        end
+
+        new_fixture_name = base_name
+        while @named_new_fixtures[new_fixture_name] || (existing_fixtures[new_fixture_name] && !@deleted_models[new_fixture_name])
           new_fixture_name = new_fixture_name.sub(/_(\d+)$/, "_#{Regexp.last_match(1).to_i + 1}")
         end
 

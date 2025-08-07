@@ -433,4 +433,27 @@ class FixtureRecorderTest < ActiveSupport::TestCase
 
     assert_equal 'custom_return_value', result
   end
+
+  test 'hash name replacement replaces fixture names' do
+    recorder = FixtureFarm::FixtureRecorder.new(new_user: :user_1)
+    recorder.record_fixtures do
+      User.create!(name: 'Test User', email: 'test@example.com')
+    end
+
+    fixtures = YAML.load_file(Rails.root.join('test', 'fixtures', 'users.yml'))
+    assert_includes fixtures.keys, 'new_user'
+
+    notification_fixtures = YAML.load_file(Rails.root.join('test', 'fixtures', 'notifications.yml'))
+    assert_includes notification_fixtures.keys, 'new_user_notification_1'
+  end
+
+  test 'hash name replacement prefixes when old name not found' do
+    recorder = FixtureFarm::FixtureRecorder.new(new_client: :client_1)
+    recorder.record_fixtures do
+      User.create!(name: 'Test User', email: 'test@example.com')
+    end
+
+    fixtures = YAML.load_file(Rails.root.join('test', 'fixtures', 'users.yml'))
+    assert_includes fixtures.keys, 'new_client_user_1'
+  end
 end

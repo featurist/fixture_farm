@@ -73,7 +73,7 @@ class CLITest < ActiveSupport::TestCase
   test 'CLI usage function shows correct format' do
     # Test the usage function by providing invalid command
     result = run_cli(['help'])
-    assert_match(/Usage: bundle exec fixture_farm <record\|status\|stop> \[fixture_name_prefix\]/, result[:output])
+    assert_match(/Usage: bundle exec fixture_farm <record\|status\|stop> \[name_prefix\|name_prefix:replaces_name\]/, result[:output])
     assert_equal 1, result[:exit_code]
   end
 
@@ -88,6 +88,21 @@ class CLITest < ActiveSupport::TestCase
     result = run_cli(['status'])
     assert_match(%r{Recording is off \(database was externally modified/reset\)}, result[:output])
     assert_equal 0, result[:exit_code]
+  end
+
+  test 'CLI record command handles hash syntax for name replacement' do
+    run_cli(%w[record new_user:user_1])
+
+    # Create a user through the recording session
+    recorder = FixtureFarm::FixtureRecorder.resume_recording_session
+    recorder.record_fixtures do
+      User.create!(name: 'CLI User', email: 'cli@example.com')
+    end
+
+    # Verify the fixture was created with the correct name
+    fixtures = YAML.load_file(Rails.root.join('test', 'fixtures', 'users.yml'))
+    assert_includes fixtures.keys, 'new_user'
+    assert_equal 'CLI User', fixtures['new_user']['name']
   end
 
   private
