@@ -95,9 +95,11 @@ module FixtureFarm
         end
       end
 
-      yield self
+      result = yield self
 
       stop! unless @stopped
+
+      result
     ensure
       ActiveSupport::Notifications.unsubscribe(@subscriber)
     end

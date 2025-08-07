@@ -422,4 +422,15 @@ class FixtureRecorderTest < ActiveSupport::TestCase
     expected_path = Rails.root.join('storage', 'bl', 'ob', 'blob_1')
     assert_equal expected_path, file_path
   end
+
+  test 'record_fixtures returns the result of the block' do
+    recorder = FixtureFarm::FixtureRecorder.new(nil)
+
+    result = recorder.record_fixtures do
+      User.create!(name: 'Test User', email: 'test@example.com')
+      'custom_return_value'
+    end
+
+    assert_equal 'custom_return_value', result
+  end
 end
