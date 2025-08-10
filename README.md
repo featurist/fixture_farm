@@ -124,26 +124,42 @@ FixtureFarm.low_priority_parent_model_for_naming = -> { _1.is_a?(TenantModel) }
 
 ### Attachment fixtures
 
-Rather than [manually crafting attachment fixtures](https://guides.rubyonrails.org/v8.0/active_storage_overview.html#adding-attachments-to-fixtures), we can get the gem do the leg work. Not only is this less boring, but it's also going to generate variant fixtures.
+Rather than [manually crafting attachment fixtures](https://guides.rubyonrails.org/v8.0/active_storage_overview.html#adding-attachments-to-fixtures), we can get the gem to do the work. Not only is this less boring, but it's also going to generate variant fixtures.
 
-I'd also go as far as suggesting that attachment files for generated blobs should be checked into git just as the fixtures themselves are. To share them with the development environment (e.g. `rails db:fixtures:load`), let's store test attachment files in the same `./storage` directory used in development:
+If we then check the generated blob files into git (along with the fixture files themselves), no attachment processing will be happening in tests or after `rails db:fixtures:load`.
 
-```ruby
-# config/environments/test.rb
-config.active_storage.service = :local
+We'll need a special storage service for the fixture blobs we want to keep versioned. For example:
+
+```yml
+# config/storage.yml
+test_fixtures:
+  service: Disk
+  root: <%= Rails.root.join("test/fixtures/files/active_storage_blobs") %>
 ```
 
-Now this test will not only generate attachments and variant fixtures, but also `git add` new attachment files. The old removed ones will show up in `git status`.
+Now a test like the one below is either going to fail if some product fixtures have no attachments, or, if run with `GENERATE_FIXTURES=1`, is going to generate those attachment fixtures, their variant fixtures if needed, along with all the blob files tucked away in a separate (from regular throw away storage) folder that can be checked in:
 
 ```ruby
+if ENV["GENERATE_FIXTURES"]
+  setup do
+    @original_queue_adapter = Rails.configuration.active_job.queue_adapter
+    # This is so that variants get generated and blobs analyzed
+    Rails.configuration.active_job.queue_adapter = :inline
+
+    @original_storage_service = ActiveStorage::Blob.service
+    ActiveStorage::Blob.service = ActiveStorage::Blob.services.fetch(:test_fixtures)
+  end
+
+  teardown do
+    Rails.configuration.active_job.queue_adapter = @original_queue_adapter
+    ActiveStorage::Blob.service = @original_storage_service
+  end
+end
+
 test "product fixtures have images" do
   offending_records = Product.where.missing(:images_attachments)
 
   if ENV["GENERATE_FIXTURES"]
-    # Makes generation idempotent
-    `git restore --staged storage` # clears previously added files
-    `git restore storage`          # restores previously deleted files
-
     record_fixtures do |recorder|
       ActiveStorage::Attachment.where(record_type: 'Product').destroy_all
 
@@ -153,13 +169,7 @@ test "product fixtures have images" do
           filename: "#{product.fixture_name}.jpg",
           content_type: "image/jpeg"
         )
-        # This generates variants
-        perform_enqueued_jobs
       end
-
-      recorder.stop!
-
-      `git add -f #{recorder.new_blob_file_paths.join(' ')}`
     end
   else
     assert_empty offending_records.map(&:fixture_name),

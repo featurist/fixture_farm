@@ -151,8 +151,10 @@ module FixtureFarm
 
       blob.update!(key: new_key)
 
-      from_path = Rails.root.join('storage', old_key[0..1], old_key[2..3], old_key)
-      to_dir = Rails.root.join('storage', new_key[0..1], new_key[2..3])
+      blobs_root_path = Pathname.new(ActiveStorage::Blob.service.root)
+
+      from_path = blobs_root_path.join(old_key[0..1], old_key[2..3], old_key)
+      to_dir = blobs_root_path.join(new_key[0..1], new_key[2..3])
       to_path = to_dir.join(new_key)
 
       `mkdir -p #{to_dir}`
