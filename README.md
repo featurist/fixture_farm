@@ -142,16 +142,16 @@ Now a test like the one below is either going to fail if some product fixtures h
 ```ruby
 if ENV["GENERATE_FIXTURES"]
   setup do
-    @original_queue_adapter = Rails.configuration.active_job.queue_adapter
+    @original_queue_adapter = ActiveJob::Base.queue_adapter
     # This is so that variants get generated and blobs analyzed
-    Rails.configuration.active_job.queue_adapter = :inline
+    ActiveJob::Base.queue_adapter = :inline
 
     @original_storage_service = ActiveStorage::Blob.service
     ActiveStorage::Blob.service = ActiveStorage::Blob.services.fetch(:test_fixtures)
   end
 
   teardown do
-    Rails.configuration.active_job.queue_adapter = @original_queue_adapter
+    ActiveJob::Base.queue_adapter = @original_queue_adapter
     ActiveStorage::Blob.service = @original_storage_service
   end
 end
