@@ -93,6 +93,16 @@ Assuming there was a parent fixture `dave` that didn't have any children, this t
 
 `record_fixtures` accepts optional name prefix, that applies to all new fixture names.
 
+### Automatic fixture naming
+
+Generated fixture names are based on the first `belongs_to` association of the model. E.g., if a new post fixtures belongs_to to a user fixture `bob`, the name is going to be `bob_post_1`.
+
+It's possible to lower the priority of given parent assiciations when it comes to naming, so that certain names are only picked when there are no other suitable parent associations. This is useful, for example, to exclude `acts_as_tenant` association:
+
+```ruby
+FixtureFarm.low_priority_parent_model_for_naming = -> { _1.is_a?(TenantModel) }
+```
+
 #### Fixture Name Replacement
 
 `record_fixtures` also supports hash arguments for advanced fixture naming control:
@@ -111,16 +121,6 @@ This works in two ways:
 For example:
 - A user fixture that would be named `client_1_user_1` becomes `new_client_user_1` (replacement)
 - A user fixture that would be named `user_1` becomes `new_client_user_1` (prefixing)
-
-### Automatic fixture naming
-
-Generated fixture names are based on the first `belongs_to` association of the model. E.g., if a new post fixtures belongs_to to a user fixture `bob`, the name is going to be `bob_post_1`.
-
-It's possible to lower the priority of given parent assiciations when it comes to naming, so that certain names are only picked when there are no other suitable parent associations. This is useful, for example, to exclude `acts_as_tenant` association:
-
-```ruby
-FixtureFarm.low_priority_parent_model_for_naming = -> { _1.is_a?(TenantModel) }
-```
 
 ### Attachment fixtures
 
